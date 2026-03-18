@@ -1,5 +1,5 @@
 export * from './column'
-export * from './data_source'
+export * from './connection'
 export * from './query_meta'
 export * from './queryResult'
 export * from './relationship'

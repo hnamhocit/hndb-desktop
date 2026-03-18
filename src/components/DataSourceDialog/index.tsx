@@ -47,13 +47,17 @@ const DataSourceDialog = ({
 		method,
 		isRemoteDatabase,
 		isTesting,
+		isValidatingOverrides,
 		isTestSuccessful,
+		isOverridesValidated,
+		requiresValidationBeforeSubmit,
 		serverVersion,
 		advancedSettings,
 		driverProperties,
 		selectedDbInfo,
 		handleSelectDatabase,
 		handleTestConnection,
+		handleValidateSettingOverrides,
 		handleAdvancedSettingChange,
 		handleAdvancedSettingReset,
 		onSubmit,
@@ -103,7 +107,12 @@ const DataSourceDialog = ({
 						isRemoteDatabase={isRemoteDatabase}
 						isEditMode={isEditMode}
 						isTesting={isTesting}
+						isValidatingOverrides={isValidatingOverrides}
 						isTestSuccessful={isTestSuccessful}
+						isOverridesValidated={isOverridesValidated}
+						requiresValidationBeforeSubmit={
+							requiresValidationBeforeSubmit
+						}
 						activeTab={activeTab}
 						setActiveTab={setActiveTab}
 						serverVersion={serverVersion}
@@ -113,6 +122,9 @@ const DataSourceDialog = ({
 						onAdvancedSettingReset={handleAdvancedSettingReset}
 						onSubmit={onSubmit}
 						onTestConnection={handleTestConnection}
+						onValidateSettingOverrides={
+							handleValidateSettingOverrides
+						}
 					/>
 				)}
 			</DialogContent>

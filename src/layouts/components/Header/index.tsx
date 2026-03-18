@@ -1,17 +1,12 @@
 'use client'
 
 import {
-	BellIcon,
-	BookOpenIcon,
-	CircleHelpIcon,
-	HeartIcon,
 	LogInIcon,
 	LogOutIcon,
 	MoonIcon,
 	PanelLeftIcon,
 	SettingsIcon,
 	SunIcon,
-	UserIcon,
 } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useState } from 'react'
@@ -31,15 +26,15 @@ import {
 import { useI18n } from '@/hooks'
 import { authService } from '@/services'
 import {
+	useActiveStore,
+	useConnectionStore,
 	useDataEditorStore,
-	useDataSourcesStore,
+	useMetadataStore,
 	usePreferencesStore,
 	useTabsStore,
 	useUserStore,
 } from '@/stores'
 import DataSourceSearch from './DataSourceSearch'
-
-const previewUnreadNotifications = 3
 
 interface HeaderProps {
 	onToggleSidebar?: () => void
@@ -67,20 +62,23 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 
 			useTabsStore.setState({
 				tabs: [],
-				activeTabId: null,
 				contentById: {},
 			})
 			useTabsStore.persist.clearStorage()
-
-			useDataSourcesStore.setState({
-				datasources: [],
-				connectionStatuses: {},
-				dataSourceId: null,
-				cachedDatabases: {},
-				cachedSchema: {},
+			useActiveStore.setState({
+				activeTabId: null,
+				connectionId: null,
 				database: null,
 				table: null,
-				cachedRelationships: {},
+			})
+			useConnectionStore.setState({
+				connections: [],
+			})
+
+			useMetadataStore.setState({
+				databases: {},
+				schema: {},
+				relationships: {},
 			})
 
 			useDataEditorStore.setState({ tablesState: {} })
@@ -149,17 +147,6 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 			{/* 3. PHẢI: Các công cụ & User (Chiếm 1/3, căn phải) */}
 			<div className='flex items-center justify-end gap-1.5 w-1/3'>
 				<motion.div whileTap={{ scale: 0.95 }}>
-					<Link
-						to='/notifications'
-						className={`relative ${toolbarButtonClass}`}>
-						<BellIcon className='w-4 h-4' />
-						{previewUnreadNotifications > 0 && (
-							<span className='absolute right-1 top-1 flex h-2 w-2 items-center justify-center rounded-full bg-primary ring-2 ring-background'></span>
-						)}
-					</Link>
-				</motion.div>
-
-				<motion.div whileTap={{ scale: 0.95 }}>
 					<button
 						onClick={() => void toggleTheme()}
 						className={toolbarButtonClass}>
@@ -210,42 +197,6 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 							</DropdownMenuLabel>
 							<DropdownMenuSeparator />
 
-							{/* Đã gom Blog, Problems, Donate vào đây để không rác Header */}
-							<DropdownMenuItem asChild>
-								<Link
-									to='/blog'
-									className='text-xs cursor-pointer'>
-									<BookOpenIcon className='w-4 h-4 mr-2 text-muted-foreground' />
-									{t('common.blog')}
-								</Link>
-							</DropdownMenuItem>
-							<DropdownMenuItem asChild>
-								<Link
-									to='/problems'
-									className='text-xs cursor-pointer'>
-									<CircleHelpIcon className='w-4 h-4 mr-2 text-muted-foreground' />
-									{t('common.problems')}
-								</Link>
-							</DropdownMenuItem>
-							<DropdownMenuItem asChild>
-								<Link
-									to='/donate'
-									className='text-xs cursor-pointer'>
-									<HeartIcon className='w-4 h-4 mr-2 text-muted-foreground' />
-									{t('common.donate')}
-								</Link>
-							</DropdownMenuItem>
-
-							<DropdownMenuSeparator />
-
-							<DropdownMenuItem asChild>
-								<Link
-									to={`/users/${user.id}`}
-									className='text-xs cursor-pointer'>
-									<UserIcon className='w-4 h-4 mr-2 text-muted-foreground' />
-									{t('common.profile')}
-								</Link>
-							</DropdownMenuItem>
 							<DropdownMenuItem asChild>
 								<Link
 									to='/me/settings'

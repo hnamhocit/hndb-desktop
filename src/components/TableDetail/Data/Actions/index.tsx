@@ -4,8 +4,8 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { useActiveTab, useActiveTablePath } from '@/hooks'
-import { dataSourcesService } from '@/services'
-import { useDataEditorStore, useDataSourcesStore } from '@/stores'
+import { connectionService } from '@/services'
+import { useActiveStore, useDataEditorStore } from '@/stores'
 import { generateSqlStatements, notifyError } from '@/utils'
 import DeleteButton from './DeleteButton'
 import RefreshButton from './RefreshButton'
@@ -21,7 +21,7 @@ const Actions = ({ refreshData, primaryColumnName }: ActionsProps) => {
 	const [isSaving, setIsSaving] = useState(false)
 
 	const activeTab = useActiveTab()
-	const { dataSourceId, database } = useDataSourcesStore()
+	const { connectionId, database } = useActiveStore()
 	const {
 		addEmptyRow,
 		tablesState,
@@ -51,8 +51,8 @@ const Actions = ({ refreshData, primaryColumnName }: ActionsProps) => {
 		setIsSaving(true)
 
 		try {
-			await dataSourcesService.runQuery(
-				dataSourceId!,
+			await connectionService.executeQuery(
+				connectionId!,
 				database!,
 				sqlQueries.join('\n'),
 				true, // forced execution to allow multiple statements
@@ -72,63 +72,63 @@ const Actions = ({ refreshData, primaryColumnName }: ActionsProps) => {
 		<div className='border-b'>
 			<div className='overflow-x-auto px-2 sm:px-4'>
 				<div className='flex w-max min-w-full items-center gap-1.5 sm:gap-3 py-2'>
-				<Button
-					onClick={() => addEmptyRow(tablePath)}
-					size='icon'
-					variant='ghost'>
-					<PlusIcon />
-				</Button>
+					<Button
+						onClick={() => addEmptyRow(tablePath)}
+						size='icon'
+						variant='ghost'>
+						<PlusIcon />
+					</Button>
 
-				<Button
-					size='icon'
-					variant='ghost'>
-					<PenIcon />
-				</Button>
+					<Button
+						size='icon'
+						variant='ghost'>
+						<PenIcon />
+					</Button>
 
-				<Button
-					size='icon'
-					variant='ghost'>
-					<CopyPlusIcon />
-				</Button>
+					<Button
+						size='icon'
+						variant='ghost'>
+						<CopyPlusIcon />
+					</Button>
 
-				<DeleteButton
-					disabled={isSaving}
-					keysLength={
-						Object.keys(tableState?.selectedRows || {}).length
-					}
-					onClick={handleDeleteClick}
-				/>
+					<DeleteButton
+						disabled={isSaving}
+						keysLength={
+							Object.keys(tableState?.selectedRows || {}).length
+						}
+						onClick={handleDeleteClick}
+					/>
 
-				{canSave && (
-					<>
-						<div className='w-0.5 h-8 bg-neutral-200 dark:bg-neutral-400'></div>
+					{canSave && (
+						<>
+							<div className='w-0.5 h-8 bg-neutral-200 dark:bg-neutral-400'></div>
 
-						<Button
-							onClick={() => discardTableChanges(tablePath)}
-							variant='ghost'
-							className='text-red-500 whitespace-nowrap'>
-							<XIcon />
-							Cancel
-						</Button>
+							<Button
+								onClick={() => discardTableChanges(tablePath)}
+								variant='ghost'
+								className='text-red-500 whitespace-nowrap'>
+								<XIcon />
+								Cancel
+							</Button>
 
-						<Button
-							disabled={isSaving}
-							onClick={handleSave}
-							variant='ghost'
-							className='text-green-500 whitespace-nowrap'>
-							<CheckIcon />
-							Save
-						</Button>
-					</>
-				)}
+							<Button
+								disabled={isSaving}
+								onClick={handleSave}
+								variant='ghost'
+								className='text-green-500 whitespace-nowrap'>
+								<CheckIcon />
+								Save
+							</Button>
+						</>
+					)}
 
-				<div className='w-0.5 h-8 bg-neutral-200 dark:bg-neutral-400'></div>
+					<div className='w-0.5 h-8 bg-neutral-200 dark:bg-neutral-400'></div>
 
-				<RefreshButton onClick={refreshData} />
+					<RefreshButton onClick={refreshData} />
 
-				<UploadCsvButton />
+					<UploadCsvButton />
 
-				<SettingsButton />
+					<SettingsButton />
 				</div>
 			</div>
 		</div>

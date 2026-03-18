@@ -1,10 +1,9 @@
 use super::test_and_probe;
+use crate::helpers::{build_conn_str, save_saved_connection};
 use crate::types::{ConnectionConfig, SavedConnection};
 use std::collections::HashMap;
-use tauri_plugin_store::StoreExt;
 
 use crate::db_client::DbClient;
-use crate::helpers::build_conn_str;
 use crate::state::AppState;
 
 #[tauri::command]
@@ -24,7 +23,7 @@ pub async fn save_and_connect(
         ));
     }
 
-    // --- BƯỚC 2: LƯU XUỐNG Ổ CỨNG (connections.json) ---
+    // --- BƯỚC 2: LƯU AN TOÀN VÀO STRONGHOLD ---
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -36,14 +35,7 @@ pub async fn save_and_connect(
         created_at: now,
     };
 
-    let store = app
-        .store("connections.json")
-        .map_err(|e| format!("Không mở được store: {}", e))?;
-    store.set(
-        id.clone(),
-        serde_json::to_value(&saved).map_err(|e| e.to_string())?,
-    );
-    store.save().map_err(|e| format!("Không lưu được: {}", e))?;
+    save_saved_connection(&app, &saved)?;
 
     // --- BƯỚC 3: TỰ ĐỘNG MỞ SESSION VÀ NẠP VÀO RAM ---
     let conn_str = build_conn_str(&config)?;
@@ -51,6 +43,10 @@ pub async fn save_and_connect(
 
     let mut connections_map = state.active_connections.lock().await;
     connections_map.insert(id.clone(), client); // Cất súng vào kho
+    drop(connections_map);
+
+    let mut manually_disconnected = state.manually_disconnected_connections.lock().await;
+    manually_disconnected.remove(&id);
 
     Ok(id)
 }

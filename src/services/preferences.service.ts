@@ -27,8 +27,11 @@ const FONT_SIZE_MAP: Record<AppFontSize, string> = {
 	md: '16px',
 	lg: '18px',
 }
+const THEME_TRANSITION_CLASS = 'theme-switching'
+const THEME_TRANSITION_MS = 220
 
 let tauriStorePromise: Promise<Store | null> | null = null
+let themeTransitionTimeout: ReturnType<typeof window.setTimeout> | null = null
 
 const isAppTheme = (value: unknown): value is AppTheme =>
 	typeof value === 'string' && APP_THEMES.includes(value as AppTheme)
@@ -123,7 +126,21 @@ export const applyPreferencesToDom = (preferences: AppPreferences) => {
 	if (typeof document === 'undefined') return
 
 	const root = document.documentElement
+	const previousTheme = root.dataset.theme as AppTheme | undefined
+
+	if (previousTheme && previousTheme !== preferences.theme) {
+		root.classList.add(THEME_TRANSITION_CLASS)
+		if (themeTransitionTimeout) {
+			window.clearTimeout(themeTransitionTimeout)
+		}
+		themeTransitionTimeout = window.setTimeout(() => {
+			root.classList.remove(THEME_TRANSITION_CLASS)
+			themeTransitionTimeout = null
+		}, THEME_TRANSITION_MS)
+	}
+
 	root.classList.toggle('dark', preferences.theme === 'dark')
+	root.dataset.theme = preferences.theme
 	root.lang = preferences.language
 	root.style.setProperty('--app-font-size', FONT_SIZE_MAP[preferences.fontSize])
 }

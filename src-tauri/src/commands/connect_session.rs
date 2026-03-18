@@ -15,7 +15,11 @@ pub async fn connect_session(
     let client = DbClient::connect(&config.driver, &conn_str).await?;
 
     let mut connections_map = state.active_connections.lock().await;
-    connections_map.insert(id, client);
+    connections_map.insert(id.clone(), client);
+    drop(connections_map);
+
+    let mut manually_disconnected = state.manually_disconnected_connections.lock().await;
+    manually_disconnected.remove(&id);
 
     Ok(())
 }

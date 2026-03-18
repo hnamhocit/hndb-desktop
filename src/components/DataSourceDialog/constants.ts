@@ -2,7 +2,7 @@ import type { DataSourceFormValues, DriverProperty } from '@/schemas'
 
 export const DEFAULT_FORM_VALUES: DataSourceFormValues = {
 	name: '',
-	type: 'postgresql',
+	type: 'postgres',
 	method: 'host',
 	host: 'localhost',
 	port: 5432,

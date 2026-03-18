@@ -1,4 +1,4 @@
-import { useDataEditorStore, useTabsStore } from '@/stores'
+import { useActiveStore, useDataEditorStore, useTabsStore } from '@/stores'
 
 const escapeIdentifier = (identifier: string) => {
 	return `"${identifier.replace(/"/g, '""')}"`
@@ -36,7 +36,8 @@ export const generateSqlStatements = (
 ) => {
 	const statements: string[] = []
 
-	const { tabs, activeTabId } = useTabsStore.getState()
+	const { tabs } = useTabsStore.getState()
+	const { activeTabId } = useActiveStore.getState()
 	const activeTab = tabs.find((t) => t.id === activeTabId) || null
 
 	if (!activeTab?.table) return statements

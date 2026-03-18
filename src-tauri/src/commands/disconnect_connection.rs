@@ -11,5 +11,8 @@ pub async fn disconnect_connection(
         client.close().await;
     }
 
+    let mut manually_disconnected = state.manually_disconnected_connections.lock().await;
+    manually_disconnected.insert(id);
+
     Ok(())
 }

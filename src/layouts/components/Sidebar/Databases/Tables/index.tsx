@@ -2,10 +2,12 @@ import clsx from 'clsx'
 import { CornerDownLeftIcon, Table2Icon } from 'lucide-react'
 import { useNavigate } from 'react-router'
 
-// Xoá import AccordionContent ở đây đi
-import { useSchema } from '@/hooks'
+import { useActiveTab, useTables } from '@/hooks'
 import { ITab } from '@/interfaces'
-import { useDataSourcesStore, useTabsStore } from '@/stores'
+import {
+	useActiveStore,
+	useTabsStore,
+} from '@/stores'
 
 interface TablesProps {
 	dataSourceId: string
@@ -14,16 +16,18 @@ interface TablesProps {
 
 const Tables = ({ dataSourceId, database }: TablesProps) => {
 	const navigate = useNavigate()
+	const activeTab = useActiveTab()
 	const {
+		setConnectionId,
+		setDatabase,
 		setTable,
 		table: activeTable,
 		database: activeDatabase,
-	} = useDataSourcesStore()
-	const { tabs, setTabs, setActiveTabId } = useTabsStore()
+		setActiveTabId,
+	} = useActiveStore()
+	const { tabs, setTabs, updateTab } = useTabsStore()
 
-	const { schema, isLoading } = useSchema(dataSourceId, database)
-
-	const tableList = Object.keys(schema || {})
+	const { tables, isLoading } = useTables(dataSourceId, database)
 
 	const handleTableClick = (e: React.MouseEvent, tableName: string) => {
 		e.stopPropagation()
@@ -33,40 +37,54 @@ const Tables = ({ dataSourceId, database }: TablesProps) => {
 			id,
 			type: 'table',
 			title: tableName,
+			workspaceId: dataSourceId,
+			connectionId: dataSourceId,
 			dataSourceId,
 			database,
 			table: tableName,
 		}
 
-		setActiveTabId(id)
-		setTable(tableName)
-		navigate('/')
-
 		if (!tabs.find((tab) => tab.id === id)) {
 			setTabs([...tabs, newTab])
 		}
+
+		setConnectionId(dataSourceId)
+		setDatabase(database)
+		setTable(tableName)
+
+		if (activeTab?.type === 'query') {
+			updateTab(activeTab.id, {
+				workspaceId: dataSourceId,
+				connectionId: dataSourceId,
+				dataSourceId,
+				database,
+				table: tableName,
+			})
+		}
+
+		setActiveTabId(id)
+		navigate('/')
 	}
 
 	if (isLoading) {
 		return (
-			<div className='text-center text-gray-500 py-3 font-mono'>
+			<div className='px-3 py-3 text-center font-mono text-xs text-muted-foreground'>
 				Loading tables...
 			</div>
 		)
 	}
 
-	if (tableList.length === 0) {
+	if (tables.length === 0) {
 		return (
-			<div className='text-center text-gray-500 py-3 font-mono'>
+			<div className='px-3 py-3 text-center font-mono text-xs text-muted-foreground'>
 				No tables found.
 			</div>
 		)
 	}
 
-	// Đổi AccordionContent thành div hoặc Fragment
 	return (
-		<div className='flex flex-col'>
-			{tableList.map((tableName) => {
+		<div className='flex flex-col gap-1 pt-1'>
+			{tables.map((tableName) => {
 				const isActive =
 					activeTable === tableName && activeDatabase === database
 
@@ -75,13 +93,16 @@ const Tables = ({ dataSourceId, database }: TablesProps) => {
 						key={tableName}
 						onClick={(e) => handleTableClick(e, tableName)}
 						className={clsx(
-							'relative select-none flex items-center justify-between gap-4 py-2 px-4 transition-all duration-200 cursor-pointer font-mono',
+							'relative flex cursor-pointer select-none items-center justify-between gap-3 rounded-md px-3 py-2 transition-all duration-200 font-mono text-sm',
 							isActive ?
-								'text-primary bg-linear-to-r from-primary/10 to-transparent font-medium before:absolute before:left-0 before:top-0 before:h-full before:w-0.75 before:bg-primary before:rounded-r-full'
-							:	'text-gray-500 hover:text-primary hover:bg-gray-50/50 dark:hover:bg-gray-800/30',
+								'bg-primary/8 font-medium text-primary'
+							:	'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
 						)}>
 						<div className='flex items-center gap-3'>
-							<Table2Icon size={16} />
+							<Table2Icon
+								size={15}
+								className='shrink-0 opacity-80'
+							/>
 							<span className='truncate'>{tableName}</span>
 						</div>
 

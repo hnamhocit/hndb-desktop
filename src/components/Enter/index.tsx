@@ -15,7 +15,8 @@ import {
 	CardTitle,
 } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { notifyError, supabaseClient } from '@/utils'
+import { notifyError } from '@/utils'
+import { supabaseClient } from '@/utils/supabase'
 import LoginForm from './LoginForm'
 import RegisterForm from './RegisterForm'
 

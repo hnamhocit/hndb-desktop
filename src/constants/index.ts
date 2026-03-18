@@ -1,1 +1,1 @@
-export * from './supportDataSources'
+export * from './supportConnections'

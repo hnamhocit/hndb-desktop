@@ -18,8 +18,8 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { id } from '@/helpers'
-import { dataSourcesService } from '@/services'
-import { useContextMenuStore, useDataSourcesStore } from '@/stores'
+import { connectionService } from '@/services'
+import { useContextMenuStore, useMetadataStore } from '@/stores'
 import { notifyError, renderToken, resolveQueryByDialect } from '@/utils'
 
 const formSchema = z.object({
@@ -48,8 +48,7 @@ const RenameDialog = ({
 	const { target, actionType, isSubmitting, setIsSubmitting, closeAction } =
 		useContextMenuStore()
 
-	const { cachedDatabases, setCachedDatabases, setCachedSchema } =
-		useDataSourcesStore()
+	const { databases, setDatabases, schema, setSchema } = useMetadataStore()
 
 	const isOpen =
 		actionType === 'rename' &&
@@ -88,10 +87,10 @@ const RenameDialog = ({
 			const query = resolveQueryByDialect(
 				dataSourceId,
 				{
-					postgresql: ({ oldName, newName }, dialect) =>
+					postgres: ({ oldName, newName }, dialect) =>
 						`ALTER DATABASE ${renderToken(oldName, dialect)} RENAME TO ${renderToken(newName, dialect)};`,
 
-					'sql-server': ({ oldName, newName }, dialect) =>
+					mssql: ({ oldName, newName }, dialect) =>
 						`ALTER DATABASE ${renderToken(oldName, dialect)} MODIFY NAME = ${renderToken(newName, dialect)};`,
 				},
 				{
@@ -108,15 +107,15 @@ const RenameDialog = ({
 				return
 			}
 
-			await dataSourcesService.runQuery(
+			await connectionService.runQuery(
 				dataSourceId,
 				database,
 				query,
 				true,
 			)
 
-			const current = cachedDatabases[dataSourceId] ?? []
-			setCachedDatabases(
+			const current = databases[dataSourceId] ?? []
+			setDatabases(
 				dataSourceId,
 				current.map((db) => (db === database ? name : db)),
 			)
@@ -124,12 +123,11 @@ const RenameDialog = ({
 			const oldSchemaKey = `${dataSourceId}-${database}`
 			const newSchemaKey = `${dataSourceId}-${name}`
 
-			const oldSchema =
-				useDataSourcesStore.getState().cachedSchema[oldSchemaKey]
+			const oldSchema = schema[oldSchemaKey]
 
 			if (oldSchema) {
-				setCachedSchema(newSchemaKey, oldSchema)
-				setCachedSchema(oldSchemaKey, {})
+				setSchema(newSchemaKey, oldSchema)
+				setSchema(oldSchemaKey, {})
 			}
 
 			closeAction()

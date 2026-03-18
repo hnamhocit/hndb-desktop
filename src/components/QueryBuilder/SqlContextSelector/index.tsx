@@ -4,7 +4,12 @@
 import { useMemo } from 'react'
 
 import { useActiveTab, useDatabases } from '@/hooks'
-import { useDataSourcesStore, useTabsStore } from '@/stores'
+import {
+	useActiveStore,
+	useConnectionStore,
+	useTabsStore,
+} from '@/stores'
+import { getTabConnectionId } from '@/utils'
 import SelectChip from './SelectChip'
 
 type Option = {
@@ -13,14 +18,15 @@ type Option = {
 }
 
 export default function SqlContextSelector() {
-	const { datasources } = useDataSourcesStore()
+	const { connections } = useConnectionStore()
 	const { updateTab } = useTabsStore()
+	const { setConnectionId, setDatabase, setTable } = useActiveStore()
 
 	const activeTab = useActiveTab()
-	const activeDataSourceId = activeTab?.dataSourceId || ''
+	const activeConnectionId = getTabConnectionId(activeTab) ?? ''
 
 	const { databases, isLoading: isDatabasesLoading } = useDatabases(
-		activeDataSourceId,
+		activeConnectionId,
 		{
 			autoFetch: true,
 			showAllOverride: true,
@@ -35,18 +41,24 @@ export default function SqlContextSelector() {
 	}, [databases])
 
 	const dataSourceOptions = useMemo<Option[]>(() => {
-		return datasources.map((ds) => ({
-			label: ds.name || ds.type,
+		return connections.map((ds) => ({
+			label: ds.name || ds.config.driver,
 			value: ds.id,
 		}))
-	}, [datasources])
+	}, [connections])
 
 	if (!activeTab) return null
 
 	const handleSelectDataSource = (value: string | null) => {
 		if (!value) return
 
+		setConnectionId(value)
+		setDatabase(null)
+		setTable(null)
+
 		updateTab(activeTab.id, {
+			workspaceId: value,
+			connectionId: value,
 			dataSourceId: value,
 			database: null,
 			table: null,
@@ -54,6 +66,9 @@ export default function SqlContextSelector() {
 	}
 
 	const handleSelectDatabase = (value: string | null) => {
+		setDatabase(value)
+		setTable(null)
+
 		updateTab(activeTab.id, {
 			database: value,
 			table: null,
@@ -63,13 +78,17 @@ export default function SqlContextSelector() {
 	return (
 		<div className='flex items-center gap-1 rounded-md border px-2 py-1 w-fit max-w-full overflow-x-auto whitespace-nowrap'>
 			<SelectChip
-				value={activeTab.dataSourceId}
+				value={
+					activeTab.connectionId ??
+					activeTab.workspaceId ??
+					activeTab.dataSourceId
+				}
 				placeholder='{data_sources}'
 				options={dataSourceOptions}
 				onSelect={handleSelectDataSource}
 			/>
 
-			{activeTab.dataSourceId && (
+			{activeConnectionId && (
 				<>
 					<span className='text-muted-foreground'>/</span>
 

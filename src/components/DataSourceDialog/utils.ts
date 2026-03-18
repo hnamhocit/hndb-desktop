@@ -1,8 +1,7 @@
-import type { IDataSource } from '@/interfaces'
+import type { IConnection } from '@/interfaces'
 import type {
 	DataSourceFormData,
 	DataSourceFormValues,
-	DataSourceType,
 	DriverProperty,
 } from '@/schemas'
 
@@ -74,34 +73,36 @@ export const normalizeDriverProperties = (input: unknown): DriverProperty[] => {
 }
 
 export const mapDataSourceToFormData = (
-	dataSource: IDataSource,
+	dataSource: IConnection,
 ): DataSourceFormValues => {
+	const mode = dataSource.config.mode
 	const baseFormData = {
 		name: dataSource.name,
-		type: dataSource.type,
-		savePassword: dataSource.config.savePassword ?? true,
-		showAllDatabases: dataSource.config.showAllDatabases ?? true,
+		type: dataSource.config.driver,
+		savePassword: true,
+		showAllDatabases: true,
 		driverProperties: normalizeDriverProperties(
-			dataSource.config.driverProperties,
+			dataSource.setting_overrides,
 		),
-		username: dataSource.config.username || '',
-		password: dataSource.config.password || '',
+		username: mode.type === 'fields' ? mode.username || '' : '',
+		password:
+			mode.type === 'fields' ? (mode.password || '') : '',
 	}
 
-	if (dataSource.config.method === 'url') {
+	if (mode.type === 'url') {
 		return {
 			...baseFormData,
 			method: 'url',
-			url: dataSource.config.url || '',
+			url: mode.connection_string || '',
 		}
 	}
 
 	return {
 		...baseFormData,
 		method: 'host',
-		host: dataSource.config.host || '',
-		port: dataSource.config.port,
-		database_name: dataSource.config.database_name || '',
+		host: mode.host || '',
+		port: mode.port,
+		database_name: mode.database || '',
 	}
 }
 
@@ -123,14 +124,6 @@ export const getDialogTitle = ({
 	}
 
 	return `Configure ${selectedName || 'Database'}`
-}
-
-const DRIVER_ALIASES: Record<DataSourceType, ConnectionConfigPayload['driver']> = {
-	postgresql: 'postgres',
-	mysql: 'mysql',
-	sqlite: 'sqlite',
-	'sql-server': 'mssql',
-	'maria-db': 'mariadb',
 }
 
 const normalizeConnectionString = (
@@ -155,7 +148,7 @@ const normalizeConnectionString = (
 export const buildConnectionConfig = (
 	formData: DataSourceFormData,
 ): ConnectionConfigPayload => {
-	const driver = DRIVER_ALIASES[formData.type]
+	const driver = formData.type
 
 	if (formData.method === 'url') {
 		return {
@@ -177,6 +170,52 @@ export const buildConnectionConfig = (
 			username: formData.username || '',
 			password: formData.password || null,
 		},
+	}
+}
+
+export const buildConnectedDataSource = (
+	id: string,
+	formData: DataSourceFormData,
+): IConnection => {
+	const createdAt = new Date().toISOString()
+	const driverProperties = Object.fromEntries(
+		(formData.driverProperties || [])
+			.filter(
+				(property) =>
+					property.key.trim() !== '' && property.value.trim() !== '',
+			)
+			.map((property) => [property.key, property.value]),
+	)
+
+	return {
+		id,
+		name: formData.name,
+		config:
+			formData.method === 'url' ?
+				{
+					driver: formData.type,
+					mode: {
+						type: 'url',
+						connection_string: normalizeConnectionString(
+							formData.type,
+							formData.url,
+						),
+					},
+				}
+			:	{
+					driver: formData.type,
+					mode: {
+						type: 'fields',
+						host: formData.host || '',
+						port: formData.port ?? 0,
+						database: formData.database_name || '',
+						username: formData.username || '',
+						password:
+							formData.savePassword ? (formData.password ?? '') : null,
+					},
+				},
+		setting_overrides: driverProperties,
+		created_at: createdAt,
 	}
 }
 

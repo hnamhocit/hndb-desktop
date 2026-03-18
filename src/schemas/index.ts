@@ -1,2 +1,2 @@
 export * from './auth.schema'
-export * from './datasource.schema'
+export * from './connection.schema'

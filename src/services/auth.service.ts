@@ -1,5 +1,5 @@
 import { LoginSchema, RegisterSchema } from '@/schemas'
-import { supabaseClient } from '@/utils'
+import { supabaseClient } from '@/utils/supabase'
 
 export const authService = {
 	async login(formData: LoginSchema) {

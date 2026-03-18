@@ -1,9 +1,6 @@
 import type { AppLanguage } from '@/services/preferences.service'
 
 export const messages = {
-	'common.blog': { en: 'Blog', vi: 'Bai viet' },
-	'common.problems': { en: 'Problems', vi: 'Bai tap' },
-	'common.donate': { en: 'Donate', vi: 'Ung ho' },
 	'common.login': { en: 'Login', vi: 'Dang nhap' },
 	'common.logout': { en: 'Logout', vi: 'Dang xuat' },
 	'common.loggingOut': { en: 'Logging out...', vi: 'Dang dang xuat...' },
@@ -88,6 +85,27 @@ export const messages = {
 	},
 	'settings.typeDelete': { en: 'Type DELETE', vi: 'Nhap DELETE' },
 	'settings.deleteAccount': { en: 'Delete account', vi: 'Xoa tai khoan' },
+
+	'home.greetingMorning': { en: 'Good morning', vi: 'Chao buoi sang' },
+	'home.greetingAfternoon': { en: 'Good afternoon', vi: 'Chao buoi chieu' },
+	'home.greetingEvening': { en: 'Good evening', vi: 'Chao buoi toi' },
+	'home.subtitleMorning': {
+		en: 'Ease into the day with a fresh query.',
+		vi: 'Bat dau nhe nhang voi mot query moi nhe.',
+	},
+	'home.subtitleAfternoon': {
+		en: 'Pick up where you left off with a new query.',
+		vi: 'Mo mot query moi de tiep tuc cong viec thoi.',
+	},
+	'home.subtitleEvening': {
+		en: 'One more clean query before calling it a day.',
+		vi: 'Lam them mot query nua roi nghi cung dep.',
+	},
+	'home.quickActions': { en: 'Quick actions', vi: 'Tac vu nhanh' },
+	'home.actionNewQuery': { en: 'New query', vi: 'Query moi' },
+	'home.actionSwitchTab': { en: 'Switch tab', vi: 'Chuyen tab' },
+	'home.actionRunQuery': { en: 'Run query', vi: 'Chay query' },
+	'home.actionFocusSidebar': { en: 'Focus sidebar', vi: 'Focus sidebar' },
 } as const
 
 export type TranslationKey = keyof typeof messages

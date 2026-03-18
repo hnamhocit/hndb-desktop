@@ -9,13 +9,15 @@ import {
 } from '@/components/ui/tooltip'
 import { useActiveTab } from '@/hooks'
 import { ITab } from '@/interfaces'
-import { useTabsStore } from '@/stores'
-import { generateInsertSqlFromCsv } from '@/utils'
+import { useActiveStore, useTabsStore } from '@/stores'
+import { generateInsertSqlFromCsv, getTabConnectionId } from '@/utils'
 
 const UploadCsvButton = () => {
 	const ref = useRef<HTMLInputElement>(null)
-	const { setTabs, tabs, commitContent, setActiveTabId } = useTabsStore()
+	const { setTabs, tabs, commitContent } = useTabsStore()
+	const { setActiveTabId } = useActiveStore()
 	const activeTab = useActiveTab()
+	const connectionId = getTabConnectionId(activeTab)
 
 	return (
 		<>
@@ -50,7 +52,11 @@ const UploadCsvButton = () => {
 									id,
 									type: 'query',
 									title: file.name,
-									dataSourceId: activeTab!.dataSourceId,
+									workspaceId:
+										activeTab!.workspaceId ??
+										connectionId,
+									connectionId,
+									dataSourceId: connectionId,
 									database: activeTab!.database,
 									table: activeTab!.table,
 								}

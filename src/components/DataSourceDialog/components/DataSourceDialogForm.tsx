@@ -27,7 +27,10 @@ interface DataSourceDialogFormProps {
 	isRemoteDatabase: boolean
 	isEditMode: boolean
 	isTesting: boolean
+	isValidatingOverrides: boolean
 	isTestSuccessful: boolean
+	isOverridesValidated: boolean
+	requiresValidationBeforeSubmit: boolean
 	activeTab: 'general' | 'advanced'
 	setActiveTab: (tab: 'general' | 'advanced') => void
 	serverVersion: string
@@ -41,6 +44,7 @@ interface DataSourceDialogFormProps {
 	onAdvancedSettingReset: (settingName: string) => void
 	onSubmit: SubmitHandler<DataSourceFormData>
 	onTestConnection: () => Promise<void>
+	onValidateSettingOverrides: () => Promise<void>
 }
 
 const DataSourceDialogForm = ({
@@ -50,7 +54,10 @@ const DataSourceDialogForm = ({
 	isRemoteDatabase,
 	isEditMode,
 	isTesting,
+	isValidatingOverrides,
 	isTestSuccessful,
+	isOverridesValidated,
+	requiresValidationBeforeSubmit,
 	activeTab,
 	setActiveTab,
 	serverVersion,
@@ -60,6 +67,7 @@ const DataSourceDialogForm = ({
 	onAdvancedSettingReset,
 	onSubmit,
 	onTestConnection,
+	onValidateSettingOverrides,
 }: DataSourceDialogFormProps) => {
 	const {
 		control,
@@ -94,7 +102,11 @@ const DataSourceDialogForm = ({
 				<Tabs
 					value={activeTab}
 					onValueChange={(nextTab) => {
-						if (nextTab === 'advanced' && !isTestSuccessful) {
+						if (
+							nextTab === 'advanced' &&
+							!isEditMode &&
+							!isTestSuccessful
+						) {
 							return
 						}
 
@@ -105,7 +117,7 @@ const DataSourceDialogForm = ({
 						<TabsTrigger value='general'>General</TabsTrigger>
 						<TabsTrigger
 							value='advanced'
-							disabled={!isTestSuccessful}>
+							disabled={!isEditMode && !isTestSuccessful}>
 							Advanced
 						</TabsTrigger>
 					</TabsList>
@@ -122,6 +134,8 @@ const DataSourceDialogForm = ({
 						driverProperties={driverProperties}
 						serverVersion={serverVersion}
 						isReady={isTestSuccessful}
+						isLoading={isTesting}
+						isEditMode={isEditMode}
 						onSettingChange={onAdvancedSettingChange}
 						onSettingReset={onAdvancedSettingReset}
 					/>
@@ -134,10 +148,17 @@ const DataSourceDialogForm = ({
 						<Button
 							variant='outline'
 							type='button'
-							onClick={() => void onTestConnection()}
-							disabled={isTesting}
+							onClick={() =>
+								void (
+									requiresValidationBeforeSubmit &&
+									isTestSuccessful ?
+										onValidateSettingOverrides()
+									:	onTestConnection()
+								)
+							}
+							disabled={isTesting || isValidatingOverrides}
 							className={cn(
-								isTestSuccessful &&
+								isOverridesValidated &&
 									'border-green-500 text-green-600 hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-950/30',
 							)}>
 							{isTesting ?
@@ -145,17 +166,30 @@ const DataSourceDialogForm = ({
 									<Loader2Icon className='mr-2 h-4 w-4 animate-spin' />
 									Testing...
 								</>
-							: isTestSuccessful ?
+							: isValidatingOverrides ?
+								<>
+									<Loader2Icon className='mr-2 h-4 w-4 animate-spin' />
+									Validating...
+								</>
+							: isOverridesValidated ?
 								<>
 									<CheckCircle2Icon className='mr-2 h-4 w-4' />
-									Tested OK
+									Validated
 								</>
+							: requiresValidationBeforeSubmit && isTestSuccessful ?
+								'Validate settings'
+							: isEditMode ?
+								'Test connection (optional)'
 							:	'Test connection'}
 						</Button>
 
 						<Button
 							type='submit'
-							disabled={!isTestSuccessful || isSubmitting}>
+							disabled={
+								isSubmitting ||
+								(requiresValidationBeforeSubmit &&
+									(!isTestSuccessful || !isOverridesValidated))
+							}>
 							{isEditMode ? 'Save Connection' : 'Connect'}
 						</Button>
 					</div>

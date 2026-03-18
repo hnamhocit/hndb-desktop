@@ -3,13 +3,14 @@
 import { useNavigate } from 'react-router'
 
 import { ITab } from '@/interfaces'
-import { useDataSourcesStore, useTabsStore } from '@/stores'
+import { useActiveStore, useTabsStore } from '@/stores'
+import { PlusIcon } from 'lucide-react'
 import Tab from './Tab'
 
 const Tabs = () => {
 	const navigate = useNavigate()
-	const { tabs, setTabs, setActiveTabId, commitContent } = useTabsStore()
-	const { dataSourceId, database, table } = useDataSourcesStore()
+	const { tabs, setTabs, commitContent } = useTabsStore()
+	const { setActiveTabId, connectionId, database, table } = useActiveStore()
 
 	const handleNewQueryTab = () => {
 		const id = Date.now().toString()
@@ -17,7 +18,9 @@ const Tabs = () => {
 			id,
 			title: `Query ${tabs.length + 1}`,
 			type: 'query',
-			dataSourceId,
+			workspaceId: connectionId,
+			connectionId,
+			dataSourceId: connectionId,
 			database,
 			table,
 		}
@@ -30,12 +33,6 @@ const Tabs = () => {
 
 	return (
 		<div className='h-12 border-b flex items-end overflow-x-scroll'>
-			<div
-				className='shrink-0 h-full cursor-pointer relative min-w-1/10 hover:bg-primary hover:text-primary-foreground transition-colors duration-300 select-none flex items-center justify-center border-r px-4 sm:px-0'
-				onClick={handleNewQueryTab}>
-				<div className='font-medium font-mono'>New</div>
-			</div>
-
 			{tabs.map((tab, index) => (
 				<Tab
 					key={tab.id}
@@ -43,6 +40,11 @@ const Tabs = () => {
 					index={index}
 				/>
 			))}
+			<div
+				className='shrink-0 h-full cursor-pointer relative min-w-12 hover:bg-primary hover:text-primary-foreground transition-colors duration-300 select-none flex items-center justify-center border-r px-4 sm:px-0'
+				onClick={handleNewQueryTab}>
+				<PlusIcon />
+			</div>
 		</div>
 	)
 }

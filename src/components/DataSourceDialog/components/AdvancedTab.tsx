@@ -20,6 +20,8 @@ interface AdvancedTabProps {
 	driverProperties: DriverProperty[]
 	serverVersion: string
 	isReady: boolean
+	isLoading: boolean
+	isEditMode: boolean
 	onSettingChange: (
 		settingName: string,
 		nextValue: string,
@@ -28,11 +30,15 @@ interface AdvancedTabProps {
 	onSettingReset: (settingName: string) => void
 }
 
+const EMPTY_SELECT_SENTINEL = '__HNDB_EMPTY_OPTION__'
+
 const AdvancedTab = ({
 	advancedSettings,
 	driverProperties,
 	serverVersion,
 	isReady,
+	isLoading,
+	isEditMode,
 	onSettingChange,
 	onSettingReset,
 }: AdvancedTabProps) => {
@@ -58,7 +64,11 @@ const AdvancedTab = ({
 			className='space-y-4'>
 			{!isReady && (
 				<div className='rounded-xl border border-dashed border-border px-4 py-5 text-sm text-muted-foreground'>
-					Test connection successfully first to load advanced settings.
+					{isLoading ?
+						'Loading advanced settings from the current connection...'
+					: isEditMode ?
+						'Test connection to refresh advanced settings after you change the connection config.'
+					:	'Test connection successfully first to load advanced settings.'}
 				</div>
 			)}
 
@@ -224,22 +234,37 @@ const renderSettingInput = ({
 	) => void
 }) => {
 	if (setting.setting_type === 'enum' && setting.enum_values?.length) {
+		const normalizedOptions = setting.enum_values.map((option) => ({
+			label: option === '' ? '(empty)' : option,
+			rawValue: option,
+			value: option === '' ? EMPTY_SELECT_SENTINEL : option,
+		}))
+		const hasEmptyOption = setting.enum_values.includes('')
+		const normalizedCurrentValue =
+			currentValue === '' && hasEmptyOption ?
+				EMPTY_SELECT_SENTINEL
+			:	currentValue
+
 		return (
 			<Select
-				value={currentValue}
+				value={normalizedCurrentValue}
 				onValueChange={(nextValue) =>
-					onChange(setting.name, nextValue, setting.value)
+					onChange(
+						setting.name,
+						nextValue === EMPTY_SELECT_SENTINEL ? '' : nextValue,
+						setting.value,
+					)
 				}
 				disabled={!setting.is_editable}>
 				<SelectTrigger className='w-full'>
 					<SelectValue placeholder='Select a value' />
 				</SelectTrigger>
 				<SelectContent>
-					{setting.enum_values.map((option) => (
+					{normalizedOptions.map((option) => (
 						<SelectItem
-							key={option}
-							value={option}>
-							{option}
+							key={`${setting.name}-${option.value}`}
+							value={option.value}>
+							{option.label}
 						</SelectItem>
 					))}
 				</SelectContent>

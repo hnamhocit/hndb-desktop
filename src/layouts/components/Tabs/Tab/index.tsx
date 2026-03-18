@@ -11,7 +11,11 @@ import {
 } from '@/components/ui/context-menu'
 import { useActiveTab } from '@/hooks'
 import { ITab } from '@/interfaces'
-import { useTabsStore } from '@/stores'
+import {
+	useActiveStore,
+	useTabsStore,
+} from '@/stores'
+import { getTabConnectionId } from '@/utils'
 import { menuItems } from './menuItems'
 
 interface TabProps {
@@ -23,7 +27,9 @@ const Tab: FC<TabProps> = (props) => {
 	const navigate = useNavigate()
 	const { tab, index } = props
 	const { id, title } = tab
-	const { tabs, setTabs, setActiveTabId, removeTab } = useTabsStore()
+	const { tabs, setTabs, removeTab } = useTabsStore()
+	const { setActiveTabId, setConnectionId, setDatabase, setTable } =
+		useActiveStore()
 	const activeTab = useActiveTab()
 
 	const handleContextMenuAction = (actionId: string) => {
@@ -65,6 +71,9 @@ const Tab: FC<TabProps> = (props) => {
 						:	'text-gray-500 bg-gray-50 dark:bg-gray-900/30 hover:bg-gray-100 dark:hover:bg-gray-800/50',
 					)}
 					onClick={() => {
+						setConnectionId(getTabConnectionId(tab))
+						setDatabase(tab.database ?? null)
+						setTable(tab.table ?? null)
 						setActiveTabId(tab.id)
 						navigate('/')
 					}}>

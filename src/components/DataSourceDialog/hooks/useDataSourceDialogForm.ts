@@ -1,24 +1,34 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { invoke } from '@tauri-apps/api/core'
-import { useEffect, useRef, useState } from 'react'
-import { type SubmitHandler, useForm, useWatch } from 'react-hook-form'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+	type SubmitHandler,
+	useForm,
+	useFormState,
+	useWatch,
+} from 'react-hook-form'
 import { toast } from 'sonner'
 
-import { supportDataSources } from '@/constants/supportDataSources'
+import { supportConnections } from '@/constants'
 import {
-	type DataSourceFormData,
-	type DataSourceFormValues,
-	type DataSourceType,
-	dataSourceSchema,
+	type ConnectionFormData,
+	type ConnectionFormValues,
+	type ConnectionType,
+	connectionSchema,
 } from '@/schemas'
-import { dataSourcesService } from '@/services'
-import { useDataSourcesStore } from '@/stores'
-import { notifyError } from '@/utils'
+import { connectionService } from '@/services'
+import {
+	useActiveStore,
+	useConnectionStore,
+	useTabsStore,
+} from '@/stores'
+import { formatErrorMessage, notifyError } from '@/utils'
 
 import { DEFAULT_FORM_VALUES } from '../constants'
 import {
 	type DbSetting,
 	type TestConnectionProbeResult,
+	buildConnectedDataSource,
 	buildConnectionConfig,
 	mapDataSourceToFormData,
 	removeDriverProperty,
@@ -42,6 +52,31 @@ const CONNECTION_FIELDS = new Set([
 	'url',
 ])
 
+const VALIDATION_RELEVANT_FIELDS = new Set([
+	...CONNECTION_FIELDS,
+	'driverProperties',
+])
+
+const hasDirtyMarker = (value: unknown): boolean => {
+	if (value === true) return true
+
+	if (Array.isArray(value)) {
+		return value.some(hasDirtyMarker)
+	}
+
+	if (typeof value === 'object' && value !== null) {
+		return Object.values(value).some(hasDirtyMarker)
+	}
+
+	return false
+}
+
+const hasValidationRelevantChanges = (dirtyFields: Record<string, unknown>) =>
+	Object.entries(dirtyFields).some(
+		([fieldName, value]) =>
+			VALIDATION_RELEVANT_FIELDS.has(fieldName) && hasDirtyMarker(value),
+	)
+
 const useDataSourceDialogForm = ({
 	dataSourceId,
 	isDialogOpen,
@@ -52,7 +87,9 @@ const useDataSourceDialogForm = ({
 		'general',
 	)
 	const [isTesting, setIsTesting] = useState(false)
+	const [isValidatingOverrides, setIsValidatingOverrides] = useState(false)
 	const [isTestSuccessful, setIsTestSuccessful] = useState(false)
+	const [isOverridesValidated, setIsOverridesValidated] = useState(false)
 	const [serverVersion, setServerVersion] = useState('')
 	const [advancedSettings, setAdvancedSettings] = useState<DbSetting[]>([])
 
@@ -61,15 +98,26 @@ const useDataSourceDialogForm = ({
 	const closeResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
 		null,
 	)
+	const autoProbeConnectionIdRef = useRef<string | null>(null)
+	const probeCycleRef = useRef(0)
+	const isResettingFormRef = useRef(false)
 
-	const form = useForm<DataSourceFormValues, unknown, DataSourceFormData>({
-		resolver: zodResolver(dataSourceSchema),
+	const form = useForm<ConnectionFormValues, unknown, ConnectionFormData>({
+		resolver: zodResolver(connectionSchema),
 		defaultValues: DEFAULT_FORM_VALUES,
 	})
 
 	const { control, reset, setValue, getValues, trigger, watch } = form
+	const { dirtyFields } = useFormState({ control })
 
-	const { datasources, setDatasources } = useDataSourcesStore()
+	const { connections, setConnections, updateStatus } = useConnectionStore()
+	const { updateTab } = useTabsStore()
+	const {
+		activeTabId,
+		setConnectionId,
+		setDatabase,
+		setTable,
+	} = useActiveStore()
 
 	const isEditMode = Boolean(dataSourceId)
 	const method = useWatch({ control, name: 'method' })
@@ -79,10 +127,115 @@ const useDataSourceDialogForm = ({
 			control,
 			name: 'driverProperties',
 		}) || []
+	const requiresValidationBeforeSubmit =
+		!isEditMode ||
+		hasValidationRelevantChanges(dirtyFields as Record<string, unknown>)
+
+	const buildOverrides = (properties = driverProperties) =>
+		Object.fromEntries(
+			(properties || [])
+				.filter(
+					(property) =>
+						property.key.trim() !== '' && property.value.trim() !== '',
+				)
+				.map((property) => [property.key, property.value]),
+		)
+
+	const resetFormSafely = (values: ConnectionFormValues) => {
+		isResettingFormRef.current = true
+		reset(values)
+		queueMicrotask(() => {
+			isResettingFormRef.current = false
+		})
+	}
+
+	const runConnectionProbe = useCallback(
+		async (
+			formData: ConnectionFormData,
+			options?: {
+				showSuccessToast?: boolean
+				showErrorToast?: boolean
+			},
+		) => {
+			const probeCycleId = probeCycleRef.current + 1
+			probeCycleRef.current = probeCycleId
+
+			setIsTesting(true)
+			setIsValidatingOverrides(false)
+			setIsTestSuccessful(false)
+			setIsOverridesValidated(false)
+
+			try {
+				const probeResult = await invoke<TestConnectionProbeResult>(
+					'test_and_probe',
+					{
+						config: buildConnectionConfig(formData),
+					},
+				)
+
+				if (probeCycleId !== probeCycleRef.current) {
+					return false
+				}
+
+				if (!probeResult.success) {
+					setAdvancedSettings([])
+					setServerVersion('')
+
+					if (options?.showErrorToast !== false) {
+						toast.error(
+							formatErrorMessage(
+								probeResult.error,
+								'Connection failed. Please check your config.',
+							),
+							{
+								position: 'top-center',
+							},
+						)
+					}
+
+					return false
+				}
+
+				setAdvancedSettings(probeResult.advanced_settings)
+				setServerVersion(probeResult.server_version)
+				setIsTestSuccessful(true)
+				setActiveTab('advanced')
+
+				if (options?.showSuccessToast) {
+					toast.success('Connection successful!', {
+						position: 'top-center',
+					})
+				}
+
+				return true
+			} catch (error) {
+				if (probeCycleId !== probeCycleRef.current) {
+					return false
+				}
+
+				setAdvancedSettings([])
+				setServerVersion('')
+
+				if (options?.showErrorToast !== false) {
+					notifyError(error, 'Connection failed. Please check your config.')
+				}
+
+				return false
+			} finally {
+				if (probeCycleId === probeCycleRef.current) {
+					setIsTesting(false)
+				}
+			}
+		},
+		[],
+	)
 
 	useEffect(() => {
 		if (!isDialogOpen) {
 			initializedForOpenRef.current = false
+			autoProbeConnectionIdRef.current = null
+			probeCycleRef.current += 1
+			setIsTesting(false)
 			return
 		}
 
@@ -96,7 +249,7 @@ const useDataSourceDialogForm = ({
 		}
 
 		if (isEditMode) {
-			const existingDataSource = datasources.find(
+			const existingDataSource = connections.find(
 				(dataSource) => dataSource.id === dataSourceId,
 			)
 
@@ -104,38 +257,74 @@ const useDataSourceDialogForm = ({
 				return
 			}
 
-			reset(mapDataSourceToFormData(existingDataSource))
+			resetFormSafely(mapDataSourceToFormData(existingDataSource))
 			setStep(2)
+			setActiveTab('advanced')
 		} else {
-			reset(DEFAULT_FORM_VALUES)
+			resetFormSafely(DEFAULT_FORM_VALUES)
 			setStep(1)
+			setActiveTab('general')
 		}
 
-		setActiveTab('general')
 		setAdvancedSettings([])
 		setServerVersion('')
+		setIsValidatingOverrides(false)
 		setIsTestSuccessful(false)
+		setIsOverridesValidated(false)
 		initializedForOpenRef.current = true
-	}, [dataSourceId, datasources, isDialogOpen, isEditMode, reset])
+	}, [connections, dataSourceId, isDialogOpen, isEditMode, reset])
+
+	useEffect(() => {
+		if (!isDialogOpen || !isEditMode || !dataSourceId) {
+			return
+		}
+
+		if (autoProbeConnectionIdRef.current === dataSourceId) {
+			return
+		}
+
+		const existingDataSource = connections.find(
+			(dataSource) => dataSource.id === dataSourceId,
+		)
+
+		if (!existingDataSource) {
+			return
+		}
+
+		autoProbeConnectionIdRef.current = dataSourceId
+
+		try {
+			void runConnectionProbe(
+				connectionSchema.parse(mapDataSourceToFormData(existingDataSource)),
+				{
+					showErrorToast: false,
+				},
+			)
+		} catch {
+			setAdvancedSettings([])
+			setServerVersion('')
+			setIsTesting(false)
+		}
+	}, [connections, dataSourceId, isDialogOpen, isEditMode, runConnectionProbe])
 
 	useEffect(() => {
 		if (isEditMode) {
 			return
 		}
 
-		if (dbType === 'postgresql') {
+		if (dbType === 'postgres') {
 			setValue('port', 5432)
 			setValue('username', 'postgres')
 			return
 		}
 
-		if (dbType === 'mysql' || dbType === 'maria-db') {
+		if (dbType === 'mysql' || dbType === 'mariadb') {
 			setValue('port', 3306)
 			setValue('username', 'root')
 			return
 		}
 
-		if (dbType === 'sql-server') {
+		if (dbType === 'mssql') {
 			setValue('port', 1433)
 			setValue('username', 'sa')
 			return
@@ -150,12 +339,20 @@ const useDataSourceDialogForm = ({
 
 	useEffect(() => {
 		const subscription = watch((_, { name }) => {
+			if (isResettingFormRef.current) {
+				return
+			}
+
 			const rootField = name?.split('.')[0]
 			if (!rootField || !CONNECTION_FIELDS.has(rootField)) {
 				return
 			}
 
+			probeCycleRef.current += 1
+			setIsTesting(false)
 			setIsTestSuccessful(false)
+			setIsValidatingOverrides(false)
+			setIsOverridesValidated(false)
 			setActiveTab('general')
 			setAdvancedSettings([])
 			setServerVersion('')
@@ -182,8 +379,12 @@ const useDataSourceDialogForm = ({
 			setActiveTab('general')
 			setAdvancedSettings([])
 			setServerVersion('')
-			reset(DEFAULT_FORM_VALUES)
+			probeCycleRef.current += 1
+			setIsTesting(false)
+			resetFormSafely(DEFAULT_FORM_VALUES)
+			setIsValidatingOverrides(false)
 			setIsTestSuccessful(false)
+			setIsOverridesValidated(false)
 		}, 300)
 
 		wasDialogOpenRef.current = false
@@ -204,12 +405,14 @@ const useDataSourceDialogForm = ({
 		}
 	}, [])
 
-	const handleSelectDatabase = (type: DataSourceType) => {
+	const handleSelectDatabase = (type: ConnectionType) => {
 		setValue('type', type)
 		setActiveTab('general')
 		setAdvancedSettings([])
 		setServerVersion('')
+		setIsValidatingOverrides(false)
 		setIsTestSuccessful(false)
+		setIsOverridesValidated(false)
 		setStep(2)
 	}
 
@@ -220,41 +423,57 @@ const useDataSourceDialogForm = ({
 		}
 
 		setIsTesting(true)
+		setIsValidatingOverrides(false)
 		setIsTestSuccessful(false)
+		setIsOverridesValidated(false)
 
 		try {
-			const formData = dataSourceSchema.parse(getValues())
-			const probeResult = await invoke<TestConnectionProbeResult>(
-				'test_and_probe',
-				{
-					config: buildConnectionConfig(formData),
-				},
-			)
-
-			if (!probeResult.success) {
-				setAdvancedSettings([])
-				setServerVersion('')
-				toast.error(
-					probeResult.error ||
-						'Connection failed. Please check your config.',
-					{
-						position: 'top-center',
-					},
-				)
-				return
-			}
-
-			setAdvancedSettings(probeResult.advanced_settings)
-			setServerVersion(probeResult.server_version)
-			setIsTestSuccessful(true)
-			setActiveTab('advanced')
-			toast.success('Connection successful!', { position: 'top-center' })
+			const formData = connectionSchema.parse(getValues())
+			await runConnectionProbe(formData, {
+				showSuccessToast: true,
+			})
 		} catch (error) {
-			setAdvancedSettings([])
-			setServerVersion('')
 			notifyError(error, 'Connection failed. Please check your config.')
 		} finally {
 			setIsTesting(false)
+		}
+	}
+
+	const handleValidateSettingOverrides = async () => {
+		const isValid = await trigger()
+		if (!isValid || !isTestSuccessful) {
+			return
+		}
+
+		setIsValidatingOverrides(true)
+		setIsOverridesValidated(false)
+
+		try {
+			const formData = connectionSchema.parse(getValues())
+			const warnings = await invoke<string[]>('validate_setting_overrides', {
+				config: buildConnectionConfig(formData),
+				overrides: buildOverrides(formData.driverProperties || []),
+			})
+
+			setIsOverridesValidated(true)
+
+			if (warnings.length > 0) {
+				toast.warning(warnings.join(' '), {
+					position: 'top-center',
+				})
+				return
+			}
+
+			toast.success('Setting overrides validated successfully!', {
+				position: 'top-center',
+			})
+		} catch (error) {
+			notifyError(
+				error,
+				'Failed to validate setting overrides.',
+			)
+		} finally {
+			setIsValidatingOverrides(false)
 		}
 	}
 
@@ -272,6 +491,7 @@ const useDataSourceDialogForm = ({
 			shouldDirty: true,
 			shouldTouch: true,
 		})
+		setIsOverridesValidated(false)
 	}
 
 	const handleAdvancedSettingReset = (settingName: string) => {
@@ -283,23 +503,46 @@ const useDataSourceDialogForm = ({
 				shouldTouch: true,
 			},
 		)
+		setIsOverridesValidated(false)
 	}
 
-	const onSubmit: SubmitHandler<DataSourceFormData> = async (formData) => {
+	const onSubmit: SubmitHandler<ConnectionFormData> = async (formData) => {
+		if (
+			requiresValidationBeforeSubmit &&
+			(!isTestSuccessful || !isOverridesValidated)
+		) {
+			toast.error(
+				isEditMode ?
+					'Test connection and validate settings before saving.'
+				:	'Validate setting overrides before connecting.',
+				{ position: 'top-center' },
+			)
+			return
+		}
+
 		try {
 			if (isEditMode && dataSourceId) {
-				const { error } = await dataSourcesService.update(
+				const overrides = buildOverrides(formData.driverProperties || [])
+
+				const { error } = await connectionService.update(
 					dataSourceId,
-					formData,
+					{
+						connectionName: formData.name,
+						config: buildConnectionConfig(formData),
+						overrides,
+					},
 				)
 
 				if (error) {
+					updateStatus(dataSourceId, false)
 					toast.error(error.message, { position: 'top-center' })
 					return
 				}
 
-				setDatasources(
-					datasources.map((dataSource) => {
+				updateStatus(dataSourceId, true)
+
+				setConnections(
+					connections.map((dataSource) => {
 						if (dataSource.id !== dataSourceId) {
 							return dataSource
 						}
@@ -322,21 +565,39 @@ const useDataSourceDialogForm = ({
 					position: 'top-center',
 				})
 			} else {
-				const overrides = Object.fromEntries(
-					(formData.driverProperties || [])
-						.filter(
-							(property) =>
-								property.key.trim() !== '' &&
-								property.value.trim() !== '',
-						)
-						.map((property) => [property.key, property.value]),
-				)
+				const overrides = buildOverrides(formData.driverProperties || [])
 
-				await invoke<string>('save_and_connect', {
+				const connectionId = await invoke<string>('save_and_connect', {
 					connectionName: formData.name,
 					config: buildConnectionConfig(formData),
 					overrides,
 				})
+
+				const nextDataSource = buildConnectedDataSource(
+					connectionId,
+					formData,
+				)
+
+				setConnections([
+					...connections.filter(
+						(dataSource) => dataSource.id !== connectionId,
+					),
+					nextDataSource,
+				])
+				updateStatus(connectionId, true)
+				setConnectionId(connectionId)
+				setDatabase(null)
+				setTable(null)
+
+				if (activeTabId) {
+					updateTab(activeTabId, {
+						workspaceId: connectionId,
+						connectionId,
+						dataSourceId: connectionId,
+						database: null,
+						table: null,
+					})
+				}
 
 				toast.success('Connection saved successfully!', {
 					position: 'top-center',
@@ -355,8 +616,8 @@ const useDataSourceDialogForm = ({
 		}
 	}
 
-	const selectedDbInfo = supportDataSources.find(
-		(dataSource) => dataSource.id === dbType,
+	const selectedDbInfo = supportConnections.find(
+		(connection) => connection.id === dbType,
 	)
 
 	return {
@@ -370,13 +631,17 @@ const useDataSourceDialogForm = ({
 		method,
 		isRemoteDatabase: dbType !== 'sqlite',
 		isTesting,
+		isValidatingOverrides,
 		isTestSuccessful,
+		isOverridesValidated,
+		requiresValidationBeforeSubmit,
 		serverVersion,
 		advancedSettings,
 		driverProperties,
 		selectedDbInfo,
 		handleSelectDatabase,
 		handleTestConnection,
+		handleValidateSettingOverrides,
 		handleAdvancedSettingChange,
 		handleAdvancedSettingReset,
 		onSubmit,

@@ -1,19 +1,20 @@
-import { useTabsStore } from '@/stores'
+import { useActiveStore, useTabsStore } from '@/stores'
+import { buildTablePath, getTabConnectionId } from '@/utils'
 
 export const useActiveTablePath = (suffix?: string) => {
-	return useTabsStore((state) => {
-		const activeTab = state.tabs.find((tab) => tab.id === state.activeTabId)
+	const tabs = useTabsStore((state) => state.tabs)
+	const {
+		activeTabId,
+		connectionId,
+		database: activeDatabase,
+		table: activeTable,
+	} = useActiveStore()
+	const activeTab = tabs.find((tab) => tab.id === activeTabId)
 
-		if (!activeTab) return ''
-
-		const { database, dataSourceId, table } = activeTab
-
-		let tablePath = `/data_sources/${dataSourceId}/databases/${database}/tables/${table}`
-
-		if (suffix) {
-			tablePath += `/${suffix}`
-		}
-
-		return tablePath
-	})
+	return buildTablePath(
+		getTabConnectionId(activeTab) ?? connectionId,
+		activeTab?.database ?? activeDatabase,
+		activeTab?.table ?? activeTable,
+		suffix,
+	)
 }

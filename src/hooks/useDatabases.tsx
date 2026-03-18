@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { dataSourcesService } from '@/services'
-import { useDataSourcesStore } from '@/stores'
-import { notifyError } from '@/utils'
+import { connectionService } from '@/services'
+import { useConnectionStore, useMetadataStore } from '@/stores'
+import { formatErrorMessage, notifyError } from '@/utils'
 
 interface UseDatabasesOptions {
 	autoFetch?: boolean
@@ -19,53 +19,46 @@ export const useDatabases = (
 		typeof dataSourceId === 'string' && dataSourceId.trim() !== ''
 
 	const [isLoading, setIsLoading] = useState(false)
+	const [errorMessage, setErrorMessage] = useState<string | null>(null)
 	const inFlightRef = useRef(false)
-	const lastFetchedModeRef = useRef<string | null>(null)
 
-	const { cachedDatabases, datasources, setCachedDatabases } =
-		useDataSourcesStore()
-
-	const cached = hasValidDataSourceId ?
-			cachedDatabases[dataSourceId]
-		:	undefined
-
-	const showAllDatabases = useMemo(() => {
-		if (!hasValidDataSourceId) return false
-
-		if (typeof showAllOverride === 'boolean') {
-			return showAllOverride
-		}
-
-		return (
-			datasources.find((ds) => ds.id === dataSourceId)?.config
-				?.showAllDatabases || false
-		)
-	}, [datasources, dataSourceId, hasValidDataSourceId, showAllOverride])
+	const connectionStatus = useConnectionStore(
+		(state) => state.statuses[dataSourceId],
+	)
+	const { databases: cachedDatabases, setDatabases } = useMetadataStore()
+	const cached =
+		hasValidDataSourceId ? cachedDatabases[dataSourceId] : undefined
+	const hasCachedDatabases = cached !== undefined
+	const showAllDatabases = showAllOverride ?? false
+	const isDisconnected = connectionStatus === false
 
 	const databases = cached ?? []
-	const fetchModeKey = `${dataSourceId}:${showAllDatabases ? 'all' : 'filtered'}`
 
 	const fetchDatabases = useCallback(
 		async (forceReload = false) => {
 			if (!hasValidDataSourceId) return
-			const canUseCache =
-				cached !== undefined &&
-				lastFetchedModeRef.current === fetchModeKey
-			if (!forceReload && canUseCache) return
+			if (isDisconnected) {
+				setErrorMessage('Connection is disconnected. Please connect again.')
+				return
+			}
+			if (!forceReload && hasCachedDatabases) return
 			if (inFlightRef.current) return
 
 			inFlightRef.current = true
 			setIsLoading(true)
+			setErrorMessage(null)
 
 			try {
-				const { data } = await dataSourcesService.getDatabases(
+				const { data } = await connectionService.getDatabases(
 					dataSourceId,
 					showAllDatabases,
 				)
 
-				setCachedDatabases(dataSourceId, data.data ?? [])
-				lastFetchedModeRef.current = fetchModeKey
+				setDatabases(dataSourceId, data.data ?? [])
 			} catch (error) {
+				setErrorMessage(
+					formatErrorMessage(error, 'Failed to fetch databases.'),
+				)
 				notifyError(error, 'Failed to fetch databases.')
 			} finally {
 				inFlightRef.current = false
@@ -75,10 +68,10 @@ export const useDatabases = (
 		[
 			dataSourceId,
 			showAllDatabases,
-			cached,
-			fetchModeKey,
-			setCachedDatabases,
+			hasCachedDatabases,
+			setDatabases,
 			hasValidDataSourceId,
+			isDisconnected,
 		],
 	)
 
@@ -87,9 +80,16 @@ export const useDatabases = (
 		void fetchDatabases()
 	}, [fetchDatabases, autoFetch, hasValidDataSourceId])
 
+	useEffect(() => {
+		if (isDisconnected) {
+			setIsLoading(false)
+			setErrorMessage('Connection is disconnected. Please connect again.')
+		}
+	}, [isDisconnected])
+
 	const reload = useCallback(async () => {
 		await fetchDatabases(true)
 	}, [fetchDatabases])
 
-	return { databases, isLoading, reload }
+	return { databases, isLoading, reload, hasCachedDatabases, errorMessage }
 }

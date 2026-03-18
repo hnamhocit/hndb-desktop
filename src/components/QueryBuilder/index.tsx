@@ -8,14 +8,14 @@ import {
 	TimerIcon,
 	WandSparklesIcon,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { useActiveTab } from '@/hooks'
 import { IQueryResult } from '@/interfaces'
-import { dataSourcesService } from '@/services'
-import { useTabsStore } from '@/stores'
-import { exportToCsv, notifyError } from '@/utils'
+import { connectionService } from '@/services'
+import { useConnectionStore, useTabsStore } from '@/stores'
+import { exportToCsv, getTabConnectionId, notifyError } from '@/utils'
 import { AxiosError } from 'axios'
 import { Button } from '../ui/button'
 import ConfirmQueryDialog from './ConfirmQueryDialog'
@@ -48,16 +48,35 @@ const QueryBuilder = () => {
 
 	const { contentById } = useTabsStore()
 	const activeTab = useActiveTab()
+	const connectionId = getTabConnectionId(activeTab)
+	const connectionStatus = useConnectionStore((state) =>
+		connectionId ? state.statuses[connectionId] : undefined,
+	)
+	const isDisconnected = connectionStatus === false
 
 	const toggleIsOpen = () => setIsOpen((prev) => !prev)
+
+	useEffect(() => {
+		if (!isDisconnected) return
+
+		setResult(null)
+		setCurrentTab('results')
+	}, [isDisconnected])
 
 	const handleRunQuery = async (forced: boolean = false) => {
 		if (!activeTab) {
 			return
 		}
 
-		if (!activeTab.dataSourceId) {
+		if (!connectionId) {
 			toast.error('No data source selected', {
+				position: 'top-center',
+			})
+			return
+		}
+
+		if (isDisconnected) {
+			toast.error('Connection is disconnected. Please connect again.', {
 				position: 'top-center',
 			})
 			return
@@ -67,8 +86,8 @@ const QueryBuilder = () => {
 
 		try {
 			const query = contentById[activeTab.id]
-			const { data } = await dataSourcesService.runQuery(
-				activeTab.dataSourceId,
+			const { data } = await connectionService.executeQuery(
+				connectionId,
 				activeTab.database,
 				query,
 				forced,
@@ -107,7 +126,7 @@ const QueryBuilder = () => {
 					<div className='flex w-max min-w-full items-center gap-2 sm:gap-4'>
 						<Button
 							onClick={() => handleRunQuery()}
-							disabled={isLoading}
+							disabled={isLoading || isDisconnected}
 							size='sm'>
 							<PlayIcon />
 							Execute

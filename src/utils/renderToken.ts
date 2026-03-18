@@ -3,13 +3,13 @@ import { DataSourceType } from '@/schemas'
 
 const escapeIdentifier = (value: string, type: DataSourceType) => {
 	switch (type) {
-		case 'postgresql':
+		case 'postgres':
 		case 'sqlite':
 			return `"${value.replace(/"/g, '""')}"`
 		case 'mysql':
-		case 'maria-db':
+		case 'mariadb':
 			return `\`${value.replace(/`/g, '``')}\``
-		case 'sql-server':
+		case 'mssql':
 			return `[${value.replace(/]/g, ']]')}]`
 	}
 }
@@ -19,7 +19,7 @@ const escapeLiteral = (value: unknown, type: DataSourceType) => {
 	if (typeof value === 'number')
 		return Number.isFinite(value) ? String(value) : 'NULL'
 	if (typeof value === 'boolean') {
-		if (type === 'sql-server') return value ? '1' : '0'
+		if (type === 'mssql') return value ? '1' : '0'
 		return value ? 'TRUE' : 'FALSE'
 	}
 	if (typeof value === 'string') {

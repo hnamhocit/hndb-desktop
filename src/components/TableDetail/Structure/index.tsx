@@ -1,15 +1,37 @@
 import { Key, List, MoreVertical } from 'lucide-react'
+import { useMemo } from 'react'
 
 import { useActiveTab, useSchema } from '@/hooks'
+import { getTabConnectionId, resolveSchemaColumns } from '@/utils'
 
 const TableStructure = () => {
 	const activeTab = useActiveTab()
-	const { schema } = useSchema(
-		activeTab?.dataSourceId || '',
+	const connectionId = getTabConnectionId(activeTab) ?? ''
+	const { schema, isLoading } = useSchema(
+		connectionId,
 		activeTab?.database || '',
 	)
 
-	const columns = schema?.[activeTab?.table || ''] || []
+	const columns = useMemo(
+		() => resolveSchemaColumns(schema, activeTab?.table || ''),
+		[schema, activeTab?.table],
+	)
+
+	if (isLoading && columns.length === 0) {
+		return (
+			<div className='w-full min-h-screen flex items-center justify-center text-sm text-muted-foreground'>
+				Loading structure...
+			</div>
+		)
+	}
+
+	if (!isLoading && columns.length === 0) {
+		return (
+			<div className='w-full min-h-screen flex items-center justify-center text-sm text-muted-foreground'>
+				No column metadata available for this table yet.
+			</div>
+		)
+	}
 
 	return (
 		<div className='w-full p-3 sm:p-6 min-h-screen overflow-auto transition-colors duration-300'>

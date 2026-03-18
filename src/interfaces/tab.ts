@@ -5,7 +5,9 @@ export interface ITab {
 	type: TabType
 	title: string
 
-	dataSourceId: string | null
+	workspaceId?: string | null
+	connectionId?: string | null
+	dataSourceId?: string | null
 	database: string | null
 	table: string | null
 }

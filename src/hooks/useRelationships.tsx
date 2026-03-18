@@ -1,48 +1,31 @@
-import { useEffect, useState } from 'react'
+import { useMemo } from 'react'
 
-import { databaseService } from '@/services'
-import { useDataSourcesStore } from '@/stores'
-import { notifyError } from '@/utils'
+import {
+	buildRelationshipsFromSchema,
+	getTabConnectionId,
+	tableNamesMatch,
+} from '@/utils'
 import { useActiveTab } from './useActiveTab'
+import { useSchema } from './useSchema'
 
 export const useRelationships = () => {
-	const [isLoading, setIsLoading] = useState(false)
 	const activeTab = useActiveTab()
-	const { cachedRelationships, setCachedRelationships } =
-		useDataSourcesStore()
+	const connectionId = getTabConnectionId(activeTab) ?? ''
+	const database = activeTab?.database ?? ''
+	const currentTable = activeTab?.table ?? ''
+	const { schema, isLoading } = useSchema(connectionId, database)
 
-	const cacheKey = `${activeTab!.dataSourceId}-${activeTab!.database}-${activeTab!.table}`
-	const relationships = cachedRelationships[cacheKey] || []
-	const hasRelationships = !!cachedRelationships[cacheKey]
+	const relationships = useMemo(() => {
+		if (!currentTable) return []
 
-	useEffect(() => {
-		if (hasRelationships) return
+		return buildRelationshipsFromSchema(schema).filter(
+			(rel) =>
+				tableNamesMatch(rel.source_table, currentTable) ||
+				tableNamesMatch(rel.target_table, currentTable),
+		)
+	}, [schema, currentTable])
 
-		const fetchRels = async () => {
-			setIsLoading(true)
-
-			try {
-				const { data } = await databaseService.getTableRelationships(
-					activeTab!.dataSourceId!,
-					activeTab!.database!,
-					activeTab!.table!,
-				)
-				setCachedRelationships(cacheKey, data.data || [])
-			} catch (error) {
-				notifyError(error, 'Failed to fetch relationships.')
-			} finally {
-				setIsLoading(false)
-			}
-		}
-
-		fetchRels()
-	}, [
-		activeTab,
-		cachedRelationships,
-		cacheKey,
-		hasRelationships,
-		setCachedRelationships,
-	])
+	const hasRelationships = relationships.length > 0
 
 	return { relationships, isLoading, hasRelationships }
 }

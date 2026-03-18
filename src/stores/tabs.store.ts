@@ -2,15 +2,13 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 
 import { ITab } from '@/interfaces'
+import { useActiveStore } from './active.store'
 
 type ContentById = Record<string, string>
 
 type TabsState = {
 	tabs: ITab[]
-	activeTabId: string | null
-
 	setTabs: (tabs: ITab[]) => void
-	setActiveTabId: (id: string | null) => void
 
 	addTab: (tab: ITab) => void
 	updateTab: (id: string, patch: Partial<ITab>) => void
@@ -25,10 +23,8 @@ export const useTabsStore = create<TabsState>()(
 	persist(
 		(set) => ({
 			tabs: [],
-			activeTabId: null,
 
 			setTabs: (tabs) => set({ tabs }),
-			setActiveTabId: (id) => set({ activeTabId: id }),
 
 			addTab: (tab) =>
 				set((state) => ({
@@ -59,9 +55,9 @@ export const useTabsStore = create<TabsState>()(
 
 					const newTabs = state.tabs.filter((tab) => tab.id !== id)
 
-					let newActiveTabId = state.activeTabId
+					let newActiveTabId = useActiveStore.getState().activeTabId
 
-					if (state.activeTabId === id) {
+					if (newActiveTabId === id) {
 						if (newTabs.length === 0) {
 							newActiveTabId = null
 						} else {
@@ -74,9 +70,10 @@ export const useTabsStore = create<TabsState>()(
 						}
 					}
 
+					useActiveStore.setState({ activeTabId: newActiveTabId })
+
 					return {
 						tabs: newTabs,
-						activeTabId: newActiveTabId,
 					}
 				}),
 		}),
@@ -85,7 +82,6 @@ export const useTabsStore = create<TabsState>()(
 			storage: createJSONStorage(() => localStorage),
 			partialize: (state) => ({
 				tabs: state.tabs,
-				activeTabId: state.activeTabId,
 				contentById: state.contentById,
 			}),
 		},

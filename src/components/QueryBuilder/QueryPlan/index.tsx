@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react'
 
 import { useActiveTab } from '@/hooks'
 import { IQueryResult } from '@/interfaces'
-import { databaseService } from '@/services'
-import { notifyError } from '@/utils'
+import { connectionService } from '@/services'
+import { getTabConnectionId, notifyError } from '@/utils'
 import JsonViewer from './JsonViewer'
 
 interface QueryPlanProps {
@@ -15,10 +15,11 @@ const QueryPlan = ({ query }: QueryPlanProps) => {
 	const [planData, setPlanData] = useState<IQueryResult | null>(null)
 	const [isLoading, setIsLoading] = useState(false)
 	const activeTab = useActiveTab()
+	const connectionId = getTabConnectionId(activeTab)
 
 	useEffect(() => {
 		;(async () => {
-			if (!activeTab || !activeTab.dataSourceId) {
+			if (!activeTab || !connectionId) {
 				setPlanData(null)
 				return
 			}
@@ -27,8 +28,8 @@ const QueryPlan = ({ query }: QueryPlanProps) => {
 			setPlanData(null)
 
 			try {
-				const { data } = await databaseService.queryPlan(
-					activeTab.dataSourceId,
+				const { data } = await connectionService.queryPlan(
+					connectionId,
 					query,
 					activeTab.database || '',
 				)
@@ -40,7 +41,7 @@ const QueryPlan = ({ query }: QueryPlanProps) => {
 				setIsLoading(false)
 			}
 		})()
-	}, [query, activeTab])
+	}, [query, activeTab, connectionId])
 
 	if (isLoading) {
 		return (

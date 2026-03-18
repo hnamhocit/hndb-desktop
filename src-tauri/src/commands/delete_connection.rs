@@ -1,5 +1,5 @@
+use crate::helpers::delete_saved_connection;
 use crate::state::AppState;
-use tauri_plugin_store::StoreExt;
 
 #[tauri::command]
 pub async fn delete_connection(
@@ -17,13 +17,12 @@ pub async fn delete_connection(
         }
     }
 
-    // --- BƯỚC 2: XÓA SỔ KHỎI Ổ CỨNG (connections.json) ---
-    let store = app
-        .store("connections.json")
-        .map_err(|e| format!("Không mở được store: {}", e))?;
+    let mut manually_disconnected = state.manually_disconnected_connections.lock().await;
+    manually_disconnected.remove(&connection_id);
+    drop(manually_disconnected);
 
-    store.delete(&connection_id); // Truyền tham chiếu &
-    store.save().map_err(|e| format!("Không lưu được: {}", e))?;
+    // --- BƯỚC 2: XÓA KHỎI STRONGHOLD ---
+    delete_saved_connection(&app, &connection_id)?;
 
     Ok(())
 }

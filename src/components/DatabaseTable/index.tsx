@@ -26,6 +26,20 @@ interface DatabaseTableProps {
 
 type TableRow = Record<string, unknown>
 
+const getRowKey = (
+	row: TableRow,
+	primaryColumnName: string,
+	fallbackIndex: number,
+) => {
+	const candidate = row.__tempId ?? row[primaryColumnName]
+
+	if (candidate === null || candidate === undefined || candidate === '') {
+		return `row-${fallbackIndex}`
+	}
+
+	return String(candidate)
+}
+
 const DatabaseTable = ({
 	columns,
 	initialData,
@@ -51,8 +65,8 @@ const DatabaseTable = ({
 			...insertChangeset[id],
 		}))
 
-		const mergedOriginal: TableRow[] = originalData.map((row: TableRow) => {
-			const rowId = String(row[primaryColumnName])
+		const mergedOriginal: TableRow[] = originalData.map((row, rowIndex) => {
+			const rowId = getRowKey(row, primaryColumnName, rowIndex)
 			return updateChangeset[rowId] ?
 					{ ...row, ...updateChangeset[rowId] }
 				:	row
@@ -63,7 +77,7 @@ const DatabaseTable = ({
 
 	const tableColumns = useMemo<ColumnDef<TableRow>[]>(() => {
 		const dataCols = columns.map<ColumnDef<TableRow>>((col) => {
-			const { icon: Icon, color } = getTypeInfo(col.data_type)
+			const { icon: Icon } = getTypeInfo(col.data_type)
 
 			return {
 				id: col.column_name,
@@ -72,13 +86,13 @@ const DatabaseTable = ({
 				size: 150,
 				maxSize: 500,
 				header: () => (
-					<div className='flex flex-col text-left'>
-						<div className='text-lg font-semibold'>
+					<div className='flex flex-col items-start gap-1 text-left'>
+						<div className='text-base font-semibold leading-none'>
 							{col.column_name}
 						</div>
-						<div className='flex items-center gap-2 text-neutral-500 dark:text-neutral-300'>
-							<Icon size={18} />
-							<div className='text-sm uppercase'>
+						<div className='flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground'>
+							<Icon size={15} />
+							<div>
 								{col.data_type}
 							</div>
 						</div>
@@ -86,9 +100,10 @@ const DatabaseTable = ({
 				),
 				cell: ({ row, getValue }) => {
 					const val = getValue()
-					const rowId = String(
-						row.original.__tempId ||
-							row.original[primaryColumnName],
+					const rowId = getRowKey(
+						row.original,
+						primaryColumnName,
+						row.index,
 					)
 					const isNewRow = !!row.original.__tempId
 
@@ -98,7 +113,6 @@ const DatabaseTable = ({
 							column={col}
 							initialValue={val}
 							tablePath={tablePath}
-							color={color}
 							isNewRow={isNewRow}
 						/>
 					)
@@ -112,9 +126,10 @@ const DatabaseTable = ({
 				size: 70,
 				header: () => <div className='text-center font-mono'>#</div>,
 				cell: ({ row }) => {
-					const rowId = String(
-						row.original.__tempId ||
-							row.original[primaryColumnName],
+					const rowId = getRowKey(
+						row.original,
+						primaryColumnName,
+						row.index,
 					)
 
 					const isDeleted = !!tableState?.deleteChangeset?.[rowId]
@@ -137,7 +152,7 @@ const DatabaseTable = ({
 		data: displayData,
 		columns: tableColumns,
 		getCoreRowModel: getCoreRowModel(),
-		getRowId: (row) => String(row.__tempId || row[primaryColumnName]),
+		getRowId: (row, index) => getRowKey(row, primaryColumnName, index),
 	})
 
 	const { rows } = table.getRowModel()
@@ -164,21 +179,21 @@ const DatabaseTable = ({
 		isLoading: isLoadingMore,
 		onEndReached: onLoadMore,
 		threshold: 300,
-		enabled: !!onLoadMore,
+		enabled: !!onLoadMore && displayData.length > 0,
 	})
 
 	return (
 		<div
 			ref={parentRef}
-			className='w-full h-full overflow-auto relative'>
-			<table className='w-full border-collapse whitespace-nowrap'>
+			className='relative h-full w-full overflow-auto bg-background'>
+			<table className='w-full border-separate border-spacing-0 whitespace-nowrap'>
 				<thead>
 					{table.getHeaderGroups().map((headerGroup) => (
 						<tr key={headerGroup.id}>
 							{headerGroup.headers.map((header) => (
 								<th
 									key={header.id}
-									className='border p-2 select-none sticky top-0 z-20 bg-slate-100 text-foreground dark:bg-slate-800'>
+									className='sticky top-0 z-20 border-b border-r border-border/70 bg-background px-3 py-3 text-foreground align-bottom select-none backdrop-blur supports-[backdrop-filter]:bg-background/95'>
 									{header.isPlaceholder ? null : (
 										flexRender(
 											header.column.columnDef.header,
@@ -204,9 +219,10 @@ const DatabaseTable = ({
 					{virtualItems.map((virtualRow) => {
 						const row = rows[virtualRow.index]
 
-						const currentRowId = String(
-							row.original.__tempId ||
-								row.original[primaryColumnName],
+						const currentRowId = getRowKey(
+							row.original,
+							primaryColumnName,
+							row.index,
 						)
 						const isDeleted =
 							tableState?.deleteChangeset?.[currentRowId]
@@ -215,9 +231,9 @@ const DatabaseTable = ({
 							<tr
 								key={row.id}
 								className={clsx(
-									'odd:bg-primary/5 hover:bg-primary/10 transition-colors duration-150 group',
+									'group transition-colors duration-150 odd:[&>td]:bg-muted/20 even:[&>td]:bg-background hover:[&>td]:bg-primary/[0.045]',
 									isDeleted &&
-										'bg-red-100! dark:bg-red-950/40! opacity-70!',
+										'[&>td]:bg-red-100/80 dark:[&>td]:bg-red-950/30 opacity-70',
 								)}>
 								{row.getVisibleCells().map((cell) => {
 									const columnSize = cell.column.getSize()
@@ -229,15 +245,7 @@ const DatabaseTable = ({
 												width: columnSize,
 												minWidth: columnSize,
 											}}
-											className={clsx(
-												'border select-none overflow-hidden text-ellipsis',
-												(
-													cell.column.id ===
-														'_selection'
-												) ?
-													'p-0'
-												:	'font-mono',
-											)}>
+											className='overflow-hidden border-b border-r border-border/60 p-0 align-top text-ellipsis select-none'>
 											{flexRender(
 												cell.column.columnDef.cell,
 												cell.getContext(),

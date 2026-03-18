@@ -12,7 +12,11 @@ import { useEffect } from 'react' // Đã bỏ useRef
 
 import { useActiveTab, useRelationships, useSchema } from '@/hooks'
 import { IRelationship } from '@/interfaces'
-import { getLayoutedElements } from '@/utils'
+import {
+	getLayoutedElements,
+	getTabConnectionId,
+	resolveSchemaTableName,
+} from '@/utils'
 import TableNode from './TableNode'
 
 const nodeTypes = { tableNode: TableNode }
@@ -22,33 +26,25 @@ const ERDiagram = () => {
 	const [edges, setEdges, onEdgesChange] = useEdgesState([])
 
 	const activeTab = useActiveTab()
-	const { relationships, hasRelationships, isLoading } = useRelationships()
+	const connectionId = getTabConnectionId(activeTab) ?? ''
+	const { relationships, isLoading } = useRelationships()
 	const { schema } = useSchema(
-		activeTab?.dataSourceId || '',
+		connectionId,
 		activeTab?.database || '',
 	)
 
 	// 3. Map dữ liệu sang Nodes và Edges
 	useEffect(() => {
-		if (
-			!schema ||
-			Object.keys(schema).length === 0 ||
-			!activeTab?.table ||
-			!hasRelationships
-		)
+		if (!schema || Object.keys(schema).length === 0 || !activeTab?.table) {
+			setNodes([])
+			setEdges([])
 			return
+		}
 
-		const currentTable = activeTab.table
-		const relevantTables = new Set<string>()
-
-		relevantTables.add(currentTable)
-
-		// Dùng cachedRels thay vì state relationships cũ
-		const relevantRelationships = relationships.filter(
-			(rel: IRelationship) =>
-				rel.source_table === currentTable ||
-				rel.target_table === currentTable,
-		)
+		const currentTable =
+			resolveSchemaTableName(schema, activeTab.table) ?? activeTab.table
+		const relevantTables = new Set<string>([currentTable])
+		const relevantRelationships = relationships as IRelationship[]
 
 		relevantRelationships.forEach((rel: IRelationship) => {
 			relevantTables.add(rel.source_table)
@@ -88,13 +84,12 @@ const ERDiagram = () => {
 	}, [
 		schema,
 		relationships,
-		hasRelationships,
 		activeTab?.table,
 		setNodes,
 		setEdges,
 	])
 
-	if (isLoading && !hasRelationships)
+	if (isLoading && Object.keys(schema).length === 0)
 		return (
 			<div className='w-full h-full min-h-[calc(100vh-100px)] flex items-center justify-center text-neutral-500'>
 				Calculating schema...

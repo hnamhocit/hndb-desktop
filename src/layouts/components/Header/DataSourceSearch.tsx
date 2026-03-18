@@ -6,15 +6,19 @@ import { useNavigate } from 'react-router'
 
 import { Input } from '@/components/ui/input'
 import { useActiveTab } from '@/hooks'
-import { useDataSourcesStore, useTabsStore } from '@/stores'
+import {
+	useActiveStore,
+	useConnectionStore,
+	useTabsStore,
+} from '@/stores'
 
 const DataSourceSearch = () => {
 	const navigate = useNavigate()
 	const activeTab = useActiveTab()
 
 	const { updateTab } = useTabsStore()
-	const { datasources, setDataSourceId, setDatabase, setTable } =
-		useDataSourcesStore()
+	const { connections } = useConnectionStore()
+	const { setConnectionId, setDatabase, setTable } = useActiveStore()
 
 	const [query, setQuery] = useState('')
 	const [isOpen, setIsOpen] = useState(false)
@@ -23,26 +27,28 @@ const DataSourceSearch = () => {
 		const normalizedQuery = query.trim().toLowerCase()
 		const list =
 			normalizedQuery ?
-				datasources.filter((ds) =>
-					(ds.name || ds.type)
+				connections.filter((ds) =>
+					(ds.name || ds.config.driver)
 						.toLowerCase()
 						.includes(normalizedQuery),
 				)
-			:	datasources
+			:	connections
 
 		return list.slice(0, 8)
-	}, [datasources, query])
+	}, [connections, query])
 
 	const handleSelectDataSource = (id: string, label: string) => {
 		setQuery(label)
 		setIsOpen(false)
 
-		setDataSourceId(id)
+		setConnectionId(id)
 		setDatabase(null)
 		setTable(null)
 
 		if (activeTab) {
 			updateTab(activeTab.id, {
+				workspaceId: id,
+				connectionId: id,
 				dataSourceId: id,
 				database: null,
 				table: null,
@@ -73,7 +79,7 @@ const DataSourceSearch = () => {
 					{filteredDataSources.length > 0 ?
 						<ul className='max-h-72 overflow-y-auto p-1'>
 							{filteredDataSources.map((ds) => {
-								const label = ds.name || ds.type
+								const label = ds.name || ds.config.driver
 								return (
 									<li key={ds.id}>
 										<button
@@ -91,7 +97,7 @@ const DataSourceSearch = () => {
 											</span>
 											<span className='inline-flex items-center gap-1 text-xs text-muted-foreground shrink-0'>
 												<DatabaseIcon size={12} />
-												{ds.type}
+												{ds.config.driver}
 											</span>
 										</button>
 									</li>

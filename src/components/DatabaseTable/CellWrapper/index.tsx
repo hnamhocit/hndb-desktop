@@ -9,7 +9,6 @@ interface CellWrapperProps {
 	column: IColumn
 	initialValue: unknown
 	tablePath: string
-	color: string
 	isNewRow: boolean
 }
 
@@ -18,7 +17,6 @@ const CellWrapper = ({
 	column,
 	initialValue,
 	tablePath,
-	color,
 	isNewRow,
 }: CellWrapperProps) => {
 	const isChanged = useDataEditorStore((state) => {
@@ -39,7 +37,7 @@ const CellWrapper = ({
 	const trackUpdate = useDataEditorStore((state) => state.trackUpdate)
 
 	return (
-		<div className={clsx('w-full h-full', color)}>
+		<div className={clsx('w-full h-full text-foreground')}>
 			<EditableCell
 				initialValue={initialValue}
 				column={column}

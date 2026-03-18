@@ -178,4 +178,19 @@
 	body {
 		@apply bg-background text-foreground;
 	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		.theme-switching,
+		.theme-switching *,
+		.theme-switching *::before,
+		.theme-switching *::after {
+			transition:
+				background-color 220ms ease,
+				border-color 220ms ease,
+				color 220ms ease,
+				fill 220ms ease,
+				stroke 220ms ease,
+				box-shadow 220ms ease;
+		}
+	}
 }

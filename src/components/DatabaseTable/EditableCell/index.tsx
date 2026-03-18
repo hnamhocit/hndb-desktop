@@ -62,13 +62,24 @@ const EditableCell = ({
 		['int', 'float', 'double', 'decimal', 'numeric', 'real'].some((t) =>
 			typeLower.includes(t),
 		) && !isBoolean
+	const isTemporal =
+		typeLower.includes('date') ||
+		typeLower.includes('time') ||
+		typeLower.includes('year')
+	const valueTone = clsx(
+		'font-mono text-[13px] leading-6',
+		!isChanged && !isDeleted && typeColor,
+		isDeleted && 'text-red-600 dark:text-red-400 line-through',
+		isChanged && !isDeleted && 'text-foreground',
+	)
 
 	const parsedEnums =
 		isEnum ?
 			typeLower
 				.replace('enum(', '')
 				.replace(')', '')
-				.replaceAll("'", '')
+				.split("'")
+				.join('')
 				.split(',')
 		:	[]
 
@@ -158,21 +169,19 @@ const EditableCell = ({
 
 	const displayLocalStr = getSafeDisplayValue(localValue, data_type)
 	const deletedTextStyle =
-		isDeleted ?
-			'line-through text-red-600 dark:text-red-400 font-semibold'
-		:	''
+		isDeleted ? 'line-through text-red-600 dark:text-red-400' : ''
 
 	return (
 		<div
 			className={clsx(
-				'relative w-full h-full min-h-[44px] flex items-center transition-colors font-mono',
+				'relative flex h-full min-h-[44px] w-full items-center transition-colors duration-150',
 				isChanged && !isDeleted ?
-					'bg-amber-500 text-white'
+					'bg-amber-100/80 dark:bg-amber-500/15'
 				:	'bg-transparent',
 				is_primary &&
 					!isChanged &&
 					!isDeleted &&
-					'bg-blue-50/10 dark:bg-blue-900/10',
+					'bg-primary/[0.035] dark:bg-primary/[0.08]',
 				isDeleted && 'pointer-events-none',
 			)}
 			onDoubleClick={(e) => {
@@ -201,23 +210,23 @@ const EditableCell = ({
 					}}>
 					<SelectTrigger
 						className={clsx(
-							'w-full h-full min-h-[44px] px-3 py-2.5 border-none outline-none shadow-none focus:ring-0 bg-transparent rounded-none flex items-center justify-between',
+							'flex h-full min-h-[44px] w-full items-center justify-between rounded-none border-none bg-transparent px-3 py-2 shadow-none outline-none focus:ring-0 focus-visible:ring-0',
 							isChanged && !isDeleted ?
-								'text-white focus:bg-amber-600'
-							:	`focus:bg-white dark:focus:bg-neutral-800 ${typeColor}`,
+								'text-foreground'
+							:	'text-foreground',
 							isDeleted && 'opacity-100 disabled:opacity-100',
 						)}>
 						<div
 							className={clsx(
-								'flex-1 text-left truncate',
-								deletedTextStyle,
+								'flex-1 truncate text-left',
+								valueTone,
 							)}>
 							{displayLocalStr === null ?
 								<span
 									className={clsx(
 										'italic',
 										isChanged && !isDeleted ?
-											'text-amber-100'
+											'text-amber-800 dark:text-amber-200'
 										:	'text-neutral-400',
 									)}>
 									[NULL]
@@ -225,9 +234,9 @@ const EditableCell = ({
 							: isBoolean ?
 								<span
 									className={clsx(
-										'px-2 py-0.5 rounded font-medium uppercase tracking-wider',
+										'rounded px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em]',
 										isChanged && !isDeleted ?
-											'bg-white/20 text-white'
+											'bg-amber-500/15 text-foreground'
 										:	'',
 										(
 											!isDeleted &&
@@ -250,13 +259,13 @@ const EditableCell = ({
 							<SelectValue />
 						</span>
 						{isLocked && !isDeleted && (
-							<LockIcon
-								size={14}
-								className={clsx(
-									isChanged ? 'text-white' : 'text-primary',
-									'opacity-40 ml-2 shrink-0',
-								)}
-							/>
+						<LockIcon
+							size={14}
+							className={clsx(
+								isChanged ? 'text-foreground' : 'text-primary',
+								'opacity-40 ml-2 shrink-0',
+							)}
+						/>
 						)}
 					</SelectTrigger>
 
@@ -273,7 +282,7 @@ const EditableCell = ({
 						)}
 
 						{(isBoolean ? ['true', 'false'] : parsedEnums).map(
-							(opt) => (
+							(opt: string) => (
 								<SelectItem
 									key={opt}
 									value={opt}>
@@ -296,28 +305,29 @@ const EditableCell = ({
 			: isJson || (isLocked && !isDeleted) ?
 				<div
 					className={clsx(
-						'px-3 py-2.5 w-full flex items-center justify-between group',
+						'group flex w-full items-center justify-between gap-2 px-3 py-2',
 						!isLocked && 'cursor-pointer',
 					)}>
-					<div
-						className={clsx(
-							'truncate',
-							isChanged && !isDeleted ? 'text-white' : typeColor,
-							deletedTextStyle,
-						)}>
+						<div
+							className={clsx(
+								'truncate font-mono text-[13px] leading-6',
+								!isChanged && !isDeleted && typeColor,
+								isChanged && !isDeleted && 'text-foreground',
+								deletedTextStyle,
+							)}>
 						{safeInitialValue === null ?
 							<span
 								className={clsx(
 									'italic',
-									isChanged && !isDeleted ? 'text-amber-100'
+									isChanged && !isDeleted ?
+										'text-amber-800 dark:text-amber-200'
 									:	'text-neutral-400',
 								)}>
 								[NULL]
 							</span>
 						:	<span
 								className={clsx(
-									isChanged && !isDeleted ? 'font-semibold'
-									:	'',
+									'font-mono text-[13px] leading-6',
 								)}>
 								{safeInitialValue}
 							</span>
@@ -327,8 +337,7 @@ const EditableCell = ({
 						<LockIcon
 							size={14}
 							className={clsx(
-								isChanged ? 'text-white' : 'text-primary',
-								'opacity-40 group-hover:opacity-100 transition-opacity ml-2 shrink-0',
+								'ml-2 shrink-0 text-muted-foreground opacity-40 transition-opacity group-hover:opacity-100',
 							)}
 						/>
 					)}
@@ -337,10 +346,15 @@ const EditableCell = ({
 					ref={inputRef}
 					readOnly={isLocked}
 					className={clsx(
-						'w-full h-full min-h-[44px] px-3 py-2.5 outline-none border-none resize-none overflow-hidden whitespace-nowrap transition-colors bg-transparent',
+						'w-full h-full min-h-[44px] resize-none overflow-hidden whitespace-nowrap border-none bg-transparent px-3 py-2 font-mono text-[13px] leading-6 outline-none transition-colors',
 						isChanged && !isDeleted ?
-							'text-white placeholder:text-amber-100 focus:bg-amber-600 focus:ring-1 focus:ring-white font-medium'
-						:	`focus:bg-white dark:focus:bg-neutral-800 focus:ring-1 focus:ring-primary/40 ${typeColor}`,
+							'placeholder:text-amber-700 dark:placeholder:text-amber-200'
+						:	'',
+						!isChanged && !isDeleted && typeColor,
+						isChanged && !isDeleted && 'text-foreground',
+						!isChanged && !isDeleted && isTemporal && 'tabular-nums',
+						!isChanged && !isDeleted && isNumber && 'tabular-nums',
+						'focus:bg-primary/[0.045] focus:ring-1 focus:ring-primary/20',
 						deletedTextStyle,
 						isDeleted && 'cursor-not-allowed',
 					)}

@@ -9,8 +9,8 @@ import {
 	ContextMenuSeparator,
 	ContextMenuTrigger,
 } from '@/components/ui/context-menu'
-import { databaseService, dataSourcesService } from '@/services'
-import { useContextMenuStore, useDataSourcesStore } from '@/stores'
+import { connectionService } from '@/services'
+import { useContextMenuStore, useMetadataStore } from '@/stores'
 import { notifyError, resolveQueryByDialect } from '@/utils'
 import RenameDialog from './RenameDialog'
 
@@ -25,21 +25,20 @@ const DatabaseContextMenu = ({
 	dataSourceId,
 	database,
 }: DatabaseContextMenuProps) => {
-	const { cachedDatabases, setCachedDatabases, setCachedSchema } =
-		useDataSourcesStore()
+	const { databases, setDatabases, setSchema, setTables } = useMetadataStore()
 
 	const { isSubmitting, setIsSubmitting, openAction } = useContextMenuStore()
 
 	const handleReloadSchema = async () => {
 		try {
-			const { data } = await databaseService.getTableSchema(
+			const { data } = await connectionService.getTables(
 				dataSourceId,
 				database,
 			)
 
-			setCachedSchema(`${dataSourceId}-${database}`, data.data ?? {})
+			setTables(`${dataSourceId}-${database}`, data.data ?? [])
 		} catch (error) {
-			notifyError(error, 'Failed to refresh schema.')
+			notifyError(error, 'Failed to refresh tables.')
 		}
 	}
 
@@ -48,10 +47,10 @@ const DatabaseContextMenu = ({
 
 		try {
 			const sql = resolveQueryByDialect(dataSourceId, {
-				postgresql: `DROP DATABASE "${database}";`,
+				postgres: `DROP DATABASE "${database}";`,
 				mysql: `DROP DATABASE \`${database}\`;`,
-				'maria-db': `DROP DATABASE \`${database}\`;`,
-				'sql-server': `DROP DATABASE [${database.replace(/]/g, ']]')}];`,
+				mariadb: `DROP DATABASE \`${database}\`;`,
+				mssql: `DROP DATABASE [${database.replace(/]/g, ']]')}];`,
 			})
 
 			if (!sql) {
@@ -60,15 +59,16 @@ const DatabaseContextMenu = ({
 				)
 			}
 
-			await dataSourcesService.runQuery(dataSourceId, database, sql, true)
+			await connectionService.runQuery(dataSourceId, database, sql, true)
 
-			const currentDatabases = cachedDatabases[dataSourceId] ?? []
-			setCachedDatabases(
+			const currentDatabases = databases[dataSourceId] ?? []
+			setDatabases(
 				dataSourceId,
 				currentDatabases.filter((db) => db !== database),
 			)
 
-			setCachedSchema(`${dataSourceId}-${database}`, {})
+			setTables(`${dataSourceId}-${database}`, [])
+			setSchema(`${dataSourceId}-${database}`, {})
 		} catch (error) {
 			notifyError(error, 'Failed to drop database.')
 		} finally {

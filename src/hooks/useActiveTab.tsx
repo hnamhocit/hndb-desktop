@@ -1,7 +1,8 @@
-import { useTabsStore } from '@/stores'
+import { useActiveStore, useTabsStore } from '@/stores'
 
-export const useActiveTab = () =>
-	useTabsStore(
-		(state) =>
-			state.tabs.find((tab) => tab.id === state.activeTabId) ?? null,
-	)
+export const useActiveTab = () => {
+	const tabs = useTabsStore((state) => state.tabs)
+	const activeTabId = useActiveStore((state) => state.activeTabId)
+
+	return tabs.find((tab) => tab.id === activeTabId) ?? null
+}

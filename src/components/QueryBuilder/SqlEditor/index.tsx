@@ -4,11 +4,13 @@ import CodeMirror from '@uiw/react-codemirror'
 
 import { useActiveTab, useSchema } from '@/hooks'
 import { useTabsStore } from '@/stores'
+import { getTabConnectionId } from '@/utils'
 
 export default function SqlEditor() {
 	const { commitContent, contentById } = useTabsStore()
 	const activeTab = useActiveTab()
-	const { schema } = useSchema(activeTab!.dataSourceId!, activeTab!.database!)
+	const connectionId = getTabConnectionId(activeTab) ?? ''
+	const { schema } = useSchema(connectionId, activeTab!.database!)
 
 	const value = contentById[activeTab!.id]
 

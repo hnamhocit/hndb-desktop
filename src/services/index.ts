@@ -1,5 +1,4 @@
 export * from './auth.service'
-export * from './data_sources.service'
-export * from './database.service'
+export * from './connection.service'
 export * from './preferences.service'
-export * from './users.service'
+export * from './user.service'

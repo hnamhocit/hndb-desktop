@@ -1,6 +1,6 @@
 import { SqlToken } from '@/helpers'
 import { DataSourceType } from '@/schemas'
-import { useDataSourcesStore } from '@/stores'
+import { useConnectionStore } from '@/stores'
 
 type QueryParams = Record<string, SqlToken>
 
@@ -17,9 +17,9 @@ export const resolveQueryByDialect = (
 	queries: DialectQueryMap,
 	params: QueryParams = {},
 ) => {
-	const { datasources } = useDataSourcesStore.getState()
+	const { connections } = useConnectionStore.getState()
 
-	const dialect = datasources.find((ds) => ds.id === dataSourceId)?.type
+	const dialect = connections.find((ds) => ds.id === dataSourceId)?.config.driver
 
 	if (!dialect) return null
 

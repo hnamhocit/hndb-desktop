@@ -1,21 +1,35 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { databaseService } from '@/services'
-import { useDataSourcesStore } from '@/stores'
-import { notifyError } from '@/utils'
+import { connectionService } from '@/services'
+import { useConnectionStore, useMetadataStore } from '@/stores'
+import {
+	buildDatabaseCacheKey,
+	normalizeSchemaRecord,
+	notifyError,
+} from '@/utils'
 
-export const useSchema = (dataSourceId: string, database: string) => {
-	const { cachedSchema, setCachedSchema } = useDataSourcesStore()
+export const useSchema = (connectionId: string, database: string) => {
+	const connectionStatus = useConnectionStore(
+		(state) => state.statuses[connectionId],
+	)
+	const { schema: cachedSchema, setSchema } = useMetadataStore()
 	const [isLoading, setIsLoading] = useState(false)
 	const inFlightRef = useRef(false)
 
-	const cacheKey = `${dataSourceId}-${database}`
-	const schema = cachedSchema[cacheKey] ?? {}
-	const hasCachedSchema = !!cachedSchema[cacheKey]
+	const cacheKey = buildDatabaseCacheKey(connectionId, database)
+	const cached = cachedSchema[cacheKey]
+	const schema = cached ?? {}
+	const hasCachedSchema =
+		cached !== undefined && Object.keys(cached).length > 0
+	const isDisconnected = connectionStatus === false
 
 	const fetchSchema = useCallback(
 		async (forceReload = false) => {
-			if (!dataSourceId || !database) return
+			if (!connectionId || !database || !cacheKey) return
+			if (isDisconnected) {
+				setIsLoading(false)
+				return
+			}
 			if (!forceReload && hasCachedSchema) return
 			if (inFlightRef.current) return
 
@@ -23,12 +37,12 @@ export const useSchema = (dataSourceId: string, database: string) => {
 			setIsLoading(true)
 
 			try {
-				const { data } = await databaseService.getTableSchema(
-					dataSourceId,
+				const { data } = await connectionService.getTableSchema(
+					connectionId,
 					database,
 				)
 
-				setCachedSchema(cacheKey, data.data ?? {})
+				setSchema(cacheKey, normalizeSchemaRecord(data.data))
 			} catch (error) {
 				notifyError(error, 'Failed to fetch schema.')
 			} finally {
@@ -36,12 +50,19 @@ export const useSchema = (dataSourceId: string, database: string) => {
 				setIsLoading(false)
 			}
 		},
-		[dataSourceId, database, cacheKey, hasCachedSchema, setCachedSchema],
+		[
+			connectionId,
+			database,
+			cacheKey,
+			hasCachedSchema,
+			isDisconnected,
+			setSchema,
+		],
 	)
 
 	useEffect(() => {
 		void fetchSchema()
-	}, [fetchSchema, dataSourceId, database])
+	}, [fetchSchema, connectionId, database])
 
 	const reload = useCallback(async () => {
 		await fetchSchema(true)

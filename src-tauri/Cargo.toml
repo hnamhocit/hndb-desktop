@@ -32,8 +32,22 @@ sqlx = { version = "0.8", features = [
     "mysql",      # covers cả mariadb
     "sqlite",
     "chrono",
+    "json",
 ] }
 tokio = { version = "1", features = ["full"] }
 tiberius = "0.12"
 tokio-util = { version = "0.7", features = ["compat"] }
+tauri-plugin-stronghold = "2"
+iota_stronghold = "2.1.0"
+rand = "0.10.0"
+# keyring v3 requires explicit backend features; otherwise it falls back to the
+# in-memory mock store and credentials disappear every app restart.
+keyring = { version = "3.6.3", features = [
+    "apple-native",
+    "windows-native",
+    "linux-native-sync-persistent",
+    "crypto-rust",
+] }
 
+[profile.dev.package.scrypt]
+opt-level = 3
