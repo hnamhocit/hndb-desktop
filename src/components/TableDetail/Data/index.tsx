@@ -208,6 +208,7 @@ const Data = () => {
 	return (
 		<>
 			<Actions
+				columns={columns}
 				refreshData={refreshData}
 				primaryColumnName={primaryColumnName}
 			/>

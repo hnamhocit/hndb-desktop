@@ -667,6 +667,18 @@ export const messages = {
 	},
 	'table.csv.emptyFile': { en: 'CSV file is empty!', vi: 'Tệp CSV trống!' },
 	'table.csv.parseFailed': { en: 'Failed to parse CSV file.', vi: 'Không thể đọc tệp CSV.' },
+	'table.csv.importPrepared': {
+		en: 'CSV parsed successfully. Generated INSERT SQL for {{fileName}}.',
+		vi: 'Đọc CSV thành công. Đã tạo câu lệnh INSERT cho {{fileName}}.',
+	},
+	'table.csv.invalidColumns': {
+		en: 'CSV contains unknown columns: {{columns}}',
+		vi: 'CSV chứa cột không tồn tại: {{columns}}',
+	},
+	'table.csv.noUsableColumns': {
+		en: 'CSV does not contain any valid columns for this table.',
+		vi: 'CSV không chứa cột hợp lệ nào cho bảng này.',
+	},
 	'table.delete.tooltip': {
 		en: 'Delete {{count}} selected rows',
 		vi: 'Xóa {{count}} dòng đã chọn',
@@ -719,6 +731,10 @@ export const messages = {
 	'query.connectionDisconnected': {
 		en: 'Connection is disconnected. Please connect again.',
 		vi: 'Kết nối đã ngắt. Vui lòng kết nối lại.',
+	},
+	'query.csv.exportSuccess': {
+		en: 'CSV exported successfully: {{fileName}}',
+		vi: 'Xuất CSV thành công: {{fileName}}',
 	},
 	'query.limitedResultSet': { en: 'Limited result set', vi: 'Tập kết quả bị giới hạn' },
 	'query.exportCsv': { en: 'CSV', vi: 'CSV' },

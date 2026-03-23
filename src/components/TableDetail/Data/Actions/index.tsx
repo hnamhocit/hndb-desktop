@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { useActiveTab, useActiveTablePath, useI18n } from '@/hooks'
+import { IColumn } from '@/interfaces'
 import { connectionService } from '@/services'
 import { useActiveStore, useDataEditorStore } from '@/stores'
 import { generateSqlStatements, notifyError } from '@/utils'
@@ -15,9 +16,14 @@ import UploadCsvButton from './UploadCsvButton'
 interface ActionsProps {
 	refreshData: () => Promise<void>
 	primaryColumnName: string
+	columns: IColumn[]
 }
 
-const Actions = ({ refreshData, primaryColumnName }: ActionsProps) => {
+const Actions = ({
+	refreshData,
+	primaryColumnName,
+	columns,
+}: ActionsProps) => {
 	const [isSaving, setIsSaving] = useState(false)
 	const { t } = useI18n()
 
@@ -127,7 +133,7 @@ const Actions = ({ refreshData, primaryColumnName }: ActionsProps) => {
 
 					<RefreshButton onClick={refreshData} />
 
-					<UploadCsvButton />
+					<UploadCsvButton columns={columns} />
 
 					<SettingsButton />
 				</div>

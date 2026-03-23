@@ -1,7 +1,17 @@
 export const escapeCsvValue = (value: unknown, separator = ','): string => {
 	if (value === null || value === undefined) return ''
 
-	const stringValue = String(value)
+	const stringValue =
+		typeof value === 'string' ? value
+		: value instanceof Date ? value.toISOString()
+		: typeof value === 'bigint' ? value.toString()
+		: Array.isArray(value) || typeof value === 'object' ?
+			JSON.stringify(value, (_, nestedValue) =>
+				typeof nestedValue === 'bigint' ?
+					nestedValue.toString()
+				:	nestedValue,
+			)
+		:	String(value)
 
 	if (
 		stringValue.includes(separator) ||
@@ -16,13 +26,22 @@ export const escapeCsvValue = (value: unknown, separator = ','): string => {
 
 export const buildCsvContent = (
 	rows: Record<string, unknown>[],
+	columns?: string[],
 	separator = ',',
 ): string => {
-	if (!rows || rows.length === 0) return ''
+	if ((!rows || rows.length === 0) && (!columns || columns.length === 0)) {
+		return ''
+	}
 
-	const keys = Object.keys(rows[0])
+	const keys =
+		columns?.filter(Boolean) ??
+		Array.from(
+			new Set(rows.flatMap((row) => Object.keys(row))),
+		)
 
-	const header = keys.join(separator)
+	if (keys.length === 0) return ''
+
+	const header = keys.map((key) => escapeCsvValue(key, separator)).join(separator)
 	const body = rows
 		.map((row) =>
 			keys
@@ -37,13 +56,14 @@ export const buildCsvContent = (
 export const exportToCsv = (
 	filename: string,
 	rows: Record<string, unknown>[],
+	columns?: string[],
 ): void => {
 	if (!rows || rows.length === 0) {
 		console.warn('Không có dữ liệu để xuất CSV')
 		return
 	}
 
-	const csvContent = buildCsvContent(rows)
+	const csvContent = buildCsvContent(rows, columns)
 	const blob = new Blob(['\ufeff' + csvContent], {
 		type: 'text/csv;charset=utf-8;',
 	})
@@ -51,9 +71,16 @@ export const exportToCsv = (
 	const url = URL.createObjectURL(blob)
 	const link = document.createElement('a')
 	link.href = url
-	link.setAttribute('download', `${filename}.csv`)
+	link.setAttribute(
+		'download',
+		filename.toLowerCase().endsWith('.csv') ? filename : `${filename}.csv`,
+	)
+	link.style.display = 'none'
 	document.body.appendChild(link)
 	link.click()
-	document.body.removeChild(link)
-	URL.revokeObjectURL(url)
+
+	window.setTimeout(() => {
+		document.body.removeChild(link)
+		URL.revokeObjectURL(url)
+	}, 1000)
 }

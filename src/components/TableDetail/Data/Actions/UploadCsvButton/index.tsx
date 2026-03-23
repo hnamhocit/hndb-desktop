@@ -9,17 +9,27 @@ import {
 	TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { useActiveTab, useI18n } from '@/hooks'
-import { ITab } from '@/interfaces'
-import { useActiveStore, useTabsStore } from '@/stores'
+import { IColumn, ITab } from '@/interfaces'
+import { useActiveStore, useConnectionStore, useTabsStore } from '@/stores'
 import { generateInsertSqlFromCsv, getTabConnectionId } from '@/utils'
 
-const UploadCsvButton = () => {
+interface UploadCsvButtonProps {
+	columns: IColumn[]
+}
+
+const UploadCsvButton = ({ columns }: UploadCsvButtonProps) => {
 	const { t } = useI18n()
 	const ref = useRef<HTMLInputElement>(null)
 	const { setTabs, tabs, commitContent } = useTabsStore()
 	const { setActiveTabId } = useActiveStore()
 	const activeTab = useActiveTab()
 	const connectionId = getTabConnectionId(activeTab)
+	const driver = useConnectionStore((state) =>
+		connectionId ?
+			state.connections.find((connection) => connection.id === connectionId)
+				?.config.driver
+		:	undefined,
+	)
 
 	return (
 		<>
@@ -44,10 +54,21 @@ const UploadCsvButton = () => {
 				accept='.csv, text/csv'
 				onChange={(e) => {
 					const file = e.target.files?.[0]
+					e.target.value = ''
+
+					if (!activeTab?.table || !driver) {
+						toast.error(t('table.csv.parseFailed'))
+						return
+					}
+
 					if (file) {
 						generateInsertSqlFromCsv(
 							file,
-							activeTab!.table!,
+							{
+								tableName: activeTab.table,
+								dialect: driver,
+								columns,
+							},
 							(sql) => {
 								const id = Date.now().toString()
 								const newTab: ITab = {
@@ -66,10 +87,31 @@ const UploadCsvButton = () => {
 								setTabs([...tabs, newTab])
 								setActiveTabId(id)
 								commitContent(id, sql)
+								toast.success(
+									t('table.csv.importPrepared', {
+										fileName: file.name,
+									}),
+								)
 							},
-							(errorCode) => {
-								if (errorCode === 'EMPTY_CSV') {
+							(error) => {
+								if (error.code === 'EMPTY_CSV') {
 									toast.error(t('table.csv.emptyFile'))
+									return
+								}
+
+								if (error.code === 'INVALID_COLUMNS') {
+									toast.error(
+										t('table.csv.invalidColumns', {
+											columns:
+												error.invalidColumns?.join(', ') ??
+												'',
+										}),
+									)
+									return
+								}
+
+								if (error.code === 'NO_USABLE_COLUMNS') {
+									toast.error(t('table.csv.noUsableColumns'))
 									return
 								}
 

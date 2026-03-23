@@ -246,12 +246,19 @@ const QueryBuilder = () => {
 												const timestamp = new Date()
 													.toISOString()
 													.replace(/[:.]/g, '-')
+												const fileName =
+													`query-result-${timestamp}`
 												exportToCsv(
-													`query-result-${timestamp}`,
+													fileName,
 													result.rows as Record<
 														string,
 														unknown
 													>[],
+												)
+												toast.success(
+													t('query.csv.exportSuccess', {
+														fileName: `${fileName}.csv`,
+													}),
 												)
 											}}>
 											<ArrowDownToLineIcon size={16} />
