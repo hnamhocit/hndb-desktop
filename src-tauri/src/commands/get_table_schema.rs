@@ -1,6 +1,6 @@
 use crate::db_client::DbClient;
 use crate::helpers::{
-    build_conn_str, ensure_connection_is_connected, get_config_by_id, override_database,
+    build_conn_str, check_and_disconnect_if_fatal, ensure_connection_is_connected, get_config_by_id, override_database,
 };
 use crate::state::AppState;
 use crate::types::TableColumn;
@@ -392,22 +392,34 @@ pub async fn get_table_schema(
     let config = get_config_by_id(&app, id.as_str())?;
     let effective_config = override_database(&config, Some(database.as_str()))?;
     let conn_str = build_conn_str(&effective_config)?;
-    let client = DbClient::connect(&effective_config.driver, &conn_str).await?;
+    let client = match DbClient::connect(&effective_config.driver, &conn_str).await {
+        Ok(c) => c,
+        Err(e) => {
+            check_and_disconnect_if_fatal(&id, &state, &e).await;
+            return Err(e);
+        }
+    };
 
-    let schema = match effective_config.driver.as_str() {
+    let schema_result = match effective_config.driver.as_str() {
         "postgres" => {
-            let raw = client.run_sql(build_postgres_schema_query()).await?;
-            rows_to_schema(parse_json_rows(&raw)?)
+            match client.run_sql(build_postgres_schema_query()).await {
+                Ok(raw) => Ok(rows_to_schema(parse_json_rows(&raw)?)),
+                Err(e) => Err(e),
+            }
         }
         "mysql" | "mariadb" => {
-            let raw = client.run_sql(build_mysql_schema_query()).await?;
-            rows_to_schema(parse_json_rows(&raw)?)
+            match client.run_sql(build_mysql_schema_query()).await {
+                Ok(raw) => Ok(rows_to_schema(parse_json_rows(&raw)?)),
+                Err(e) => Err(e),
+            }
         }
         "mssql" => {
-            let raw = client.run_sql(build_mssql_schema_query()).await?;
-            rows_to_schema(parse_json_rows(&raw)?)
+            match client.run_sql(build_mssql_schema_query()).await {
+                Ok(raw) => Ok(rows_to_schema(parse_json_rows(&raw)?)),
+                Err(e) => Err(e),
+            }
         }
-        "sqlite" => fetch_sqlite_schema(&client, &database).await?,
+        "sqlite" => fetch_sqlite_schema(&client, &database).await,
         driver => {
             client.close().await;
             return Err(format!(
@@ -418,5 +430,12 @@ pub async fn get_table_schema(
     };
 
     client.close().await;
-    Ok(schema)
+
+    match schema_result {
+        Ok(schema) => Ok(schema),
+        Err(e) => {
+            check_and_disconnect_if_fatal(&id, &state, &e).await;
+            Err(e)
+        }
+    }
 }

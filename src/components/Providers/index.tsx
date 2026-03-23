@@ -1,6 +1,7 @@
 'use client'
 
 import type { User } from '@supabase/supabase-js'
+import { listen } from '@tauri-apps/api/event'
 import { Loader2Icon } from 'lucide-react'
 import { ReactNode, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
@@ -11,26 +12,31 @@ import { useConnectionStore, usePreferencesStore, useUserStore } from '@/stores'
 import { isDesktopOAuthCallbackUrl, supabaseClient } from '@/utils/supabase'
 
 export default function Providers({ children }: { children: ReactNode }) {
-	const { t } = useI18n()
-	const { isLoading, setUser, setIsLoading } = useUserStore()
+	// ✅ SỬ DỤNG SELECTORS: Đảm bảo các hàm (actions) có tham chiếu ổn định, không gây loop
+	const isLoading = useUserStore((state) => state.isLoading)
+	const setUser = useUserStore((state) => state.setUser)
+	const setIsLoading = useUserStore((state) => state.setIsLoading)
+
 	const setConnections = useConnectionStore((state) => state.setConnections)
 	const setBulkStatuses = useConnectionStore((state) => state.setBulkStatuses)
-	const initializePreferences = usePreferencesStore(
-		(state) => state.initialize,
-	)
+
+	const initializePreferences = usePreferencesStore((state) => state.initialize)
+
+	const { t } = useI18n()
 
 	const initialized = useRef(false)
-	const deepLinkSubscriptionRef = useRef<{ unsubscribe: () => void } | null>(
-		null,
-	)
+	const deepLinkSubscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
+	const eventUnlistenRef = useRef<(() => void) | null>(null)
 	const handledDeepLinkUrlsRef = useRef(new Set<string>())
 	const statusPollingRef = useRef<number | null>(null)
 
+	// Khởi tạo Preferences riêng biệt
 	useEffect(() => {
 		void initializePreferences()
 	}, [initializePreferences])
 
 	useEffect(() => {
+		// Chống chạy 2 lần trong Strict Mode
 		if (initialized.current) return
 		initialized.current = true
 
@@ -45,45 +51,31 @@ export default function Providers({ children }: { children: ReactNode }) {
 
 		const mapAuthUserToStoreUser = (authUser: User) => {
 			const displayName =
-				typeof authUser.user_metadata?.name === 'string' ?
-					authUser.user_metadata.name
-				: typeof authUser.user_metadata?.full_name === 'string' ?
-					authUser.user_metadata.full_name
-				:	''
+				typeof authUser.user_metadata?.name === 'string' ? authUser.user_metadata.name
+					: typeof authUser.user_metadata?.full_name === 'string' ? authUser.user_metadata.full_name
+						: ''
 
 			const email = authUser.email || ''
 			const fallbackName = displayName || email.split('@')[0] || t('common.user')
-			const createdAt =
-				authUser.created_at ? new Date(authUser.created_at) : new Date()
-			const updatedAt =
-				authUser.updated_at ? new Date(authUser.updated_at) : createdAt
 			const avatarUrl =
-				typeof authUser.user_metadata?.avatar_url === 'string' ?
-					authUser.user_metadata.avatar_url
-				: typeof authUser.user_metadata?.picture === 'string' ?
-					authUser.user_metadata.picture
-				:	null
+				typeof authUser.user_metadata?.avatar_url === 'string' ? authUser.user_metadata.avatar_url
+					: typeof authUser.user_metadata?.picture === 'string' ? authUser.user_metadata.picture
+						: null
 
 			return {
 				id: authUser.id,
 				name: fallbackName,
 				email,
 				photo_url: avatarUrl,
-				created_at: createdAt,
-				updated_at: updatedAt,
+				created_at: authUser.created_at ? new Date(authUser.created_at) : new Date(),
+				updated_at: authUser.updated_at ? new Date(authUser.updated_at) : new Date(),
 			}
 		}
 
 		const fetchUser = async (authUser: User) => {
 			try {
-				const { data, error } = await userService.getUserById(
-					authUser.id,
-				)
+				const { data, error } = await userService.getUserById(authUser.id)
 				if (error || !data) {
-					console.warn(
-						'Failed to load user profile from users table, fallback to auth metadata:',
-						error,
-					)
 					setUser(mapAuthUserToStoreUser(authUser))
 					return
 				}
@@ -94,205 +86,80 @@ export default function Providers({ children }: { children: ReactNode }) {
 			}
 		}
 
-		const getOAuthPayload = (url: string) => {
-			const callbackUrl = new URL(url)
-			const hashParams = new URLSearchParams(
-				callbackUrl.hash.startsWith('#') ?
-					callbackUrl.hash.slice(1)
-				:	callbackUrl.hash,
-			)
-			const getParam = (name: string) =>
-				callbackUrl.searchParams.get(name) || hashParams.get(name)
-
-			return {
-				errorMessage:
-					getParam('error_description') || getParam('error'),
-				authCode: getParam('code'),
-				accessToken: getParam('access_token'),
-				refreshToken: getParam('refresh_token'),
-			}
-		}
-
 		const processDeepLinkUrl = async (url: string) => {
-			if (
-				!isDesktopOAuthCallbackUrl(url) ||
-				handledDeepLinkUrlsRef.current.has(url)
-			) {
-				return
-			}
+			if (!isDesktopOAuthCallbackUrl(url) || handledDeepLinkUrlsRef.current.has(url)) return
 
+			setIsLoading(true)
 			handledDeepLinkUrlsRef.current.add(url)
+
 			try {
-				const { errorMessage, authCode, accessToken, refreshToken } =
-					getOAuthPayload(url)
+				const callbackUrl = new URL(url)
+				const hashParams = new URLSearchParams(
+					callbackUrl.hash.startsWith('#') ? callbackUrl.hash.slice(1) : callbackUrl.hash
+				)
+				const authCode = callbackUrl.searchParams.get('code') || hashParams.get('code')
+				const errorDesc = callbackUrl.searchParams.get('error_description') || hashParams.get('error_description')
 
-				if (errorMessage) {
-					toast.error(errorMessage.replace(/\+/g, ' '))
-					setUser(null)
-					return
-				}
-
-				const {
-					data: { session: existingSession },
-				} = await supabaseClient.auth.getSession()
-				if (existingSession?.user) {
-					await fetchUser(existingSession.user)
+				if (errorDesc) {
+					toast.error(errorDesc.replace(/\+/g, ' '))
 					return
 				}
 
 				if (authCode) {
-					const { data, error } =
-						await supabaseClient.auth.exchangeCodeForSession(
-							authCode,
-						)
-					if (error) {
-						const loweredMessage = error.message.toLowerCase()
-						if (
-							loweredMessage.includes('invalid flow state') ||
-							loweredMessage.includes('flow state has expired') ||
-							loweredMessage.includes('code verifier not found')
-						) {
-							const {
-								data: { session: recoveredSession },
-							} = await supabaseClient.auth.getSession()
-							if (recoveredSession?.user) {
-								await fetchUser(recoveredSession.user)
-								return
-							}
-						}
-
-						toast.error(
-							error.message ||
-								t('auth.providerSignInFailed'),
-						)
-						setUser(null)
-						return
-					}
-
-					if (data.session?.user) {
-						await fetchUser(data.session.user)
-					}
-					return
+					const { data, error } = await supabaseClient.auth.exchangeCodeForSession(authCode)
+					if (error) throw error
+					if (data.session?.user) await fetchUser(data.session.user)
 				}
-
-				if (accessToken && refreshToken) {
-					const { data, error } =
-						await supabaseClient.auth.setSession({
-							access_token: accessToken,
-							refresh_token: refreshToken,
-						})
-					if (error) {
-						toast.error(
-							error.message ||
-								t('auth.providerSignInFailed'),
-						)
-						setUser(null)
-						return
-					}
-
-					if (data.user) {
-						await fetchUser(data.user)
-					}
-					return
-				}
-
-				toast.error(
-					t('auth.callbackMissingPayload'),
-				)
-				setUser(null)
-			} catch (error) {
-				console.error('Failed to process OAuth callback URL:', error)
-				toast.error(t('auth.providerSignInFailed'))
-				setUser(null)
+			} catch (error: any) {
+				console.error('Deep link error:', error)
+				toast.error(error.message || t('auth.providerSignInFailed'))
+			} finally {
+				setIsLoading(false)
 			}
 		}
 
 		const setupDesktopDeepLink = async () => {
 			try {
-				const { getCurrent, onOpenUrl } =
-					await import('@tauri-apps/plugin-deep-link')
+				const { getCurrent, onOpenUrl } = await import('@tauri-apps/plugin-deep-link')
 
-				// Xử lý URL nếu app được mở bởi deep link lúc khởi động
+				// 1. Lắng nghe Event từ Rust (Dành cho Windows/Linux Single Instance)
+				const unlisten = await listen<string>('deep-link-received', (event) => {
+					void processDeepLinkUrl(event.payload)
+				})
+				eventUnlistenRef.current = unlisten
+
+				// 2. Kiểm tra URL lúc khởi tạo
 				const startUrls = await getCurrent()
 				if (startUrls?.length) {
-					for (const url of startUrls) {
-						await processDeepLinkUrl(url)
-					}
+					for (const url of startUrls) void processDeepLinkUrl(url)
 				}
 
-				// Lắng nghe deep link khi app đang chạy (macOS)
-				// Windows/Linux: single-instance plugin forward URL vào đây
-				deepLinkSubscriptionRef.current = {
-					unsubscribe: await onOpenUrl((urls) => {
-						void (async () => {
-							for (const url of urls) {
-								await processDeepLinkUrl(url)
-							}
-						})()
-					}),
-				}
+				// 3. Lắng nghe URL khi app đang chạy (macOS)
+				const unsubscribe = await onOpenUrl((urls) => {
+					for (const url of urls) void processDeepLinkUrl(url)
+				})
+				deepLinkSubscriptionRef.current = { unsubscribe }
 			} catch (error) {
 				console.warn('Deep-link unavailable:', error)
 			}
 		}
 
-		const ensureAuthStateFromSession = async () => {
-			const {
-				data: { session },
-				error,
-			} = await supabaseClient.auth.getSession()
-			if (error) {
-				toast.error(error.message)
-				setUser(null)
-				return
-			}
-
-			if (session?.user) {
-				await fetchUser(session.user)
-				return
-			}
-
-			setUser(null)
-		}
-
 		const initAuth = async () => {
 			setIsLoading(true)
 			try {
-				try {
-					await connectionService.resetSessions()
+				// Reset và load connections
+				await connectionService.resetSessions()
+				const connections = await connectionService.list()
+				setConnections(connections)
 
-					const [connectionsResult, statusesResult] =
-						await Promise.allSettled([
-							connectionService.list(),
-							connectionService.listStatuses(),
-						])
+				// Đồng bộ status
+				await syncConnectionStatuses()
 
-					if (connectionsResult.status === 'fulfilled') {
-						setConnections(connectionsResult.value)
-					} else {
-						throw connectionsResult.reason
-					}
-
-					if (statusesResult.status === 'fulfilled') {
-						setBulkStatuses(statusesResult.value)
-					} else {
-						console.error(
-							'Failed to bootstrap connection statuses:',
-							statusesResult.reason,
-						)
-						setBulkStatuses({})
-					}
-				} catch (connectionError) {
-					console.error(
-						'Failed to bootstrap saved connections:',
-						connectionError,
-					)
-					setConnections([])
-					setBulkStatuses({})
-				}
-
+				// Setup Deep Link & Session
 				await setupDesktopDeepLink()
-				await ensureAuthStateFromSession()
+				const { data: { session } } = await supabaseClient.auth.getSession()
+				if (session?.user) await fetchUser(session.user)
+				else setUser(null)
 			} catch (err) {
 				console.error('Init auth error:', err)
 				setUser(null)
@@ -301,66 +168,40 @@ export default function Providers({ children }: { children: ReactNode }) {
 			}
 		}
 
-		initAuth()
-		statusPollingRef.current = window.setInterval(() => {
-			void syncConnectionStatuses()
-		}, 10000)
+		void initAuth()
 
-		const handleWindowFocus = () => {
+		// Polling & Window Focus
+		statusPollingRef.current = window.setInterval(syncConnectionStatuses, 10000)
+		const handleFocus = () => {
 			void syncConnectionStatuses()
-			void ensureAuthStateFromSession()
+			void supabaseClient.auth.getSession().then(({ data }) => {
+				if (data.session?.user) fetchUser(data.session.user)
+			})
 		}
 
-		const handleVisibilityChange = () => {
-			if (document.visibilityState === 'visible') {
-				void syncConnectionStatuses()
-			}
-		}
+		window.addEventListener('focus', handleFocus)
 
-		window.addEventListener('focus', handleWindowFocus)
-		document.addEventListener('visibilitychange', handleVisibilityChange)
-
-		const {
-			data: { subscription },
-		} = supabaseClient.auth.onAuthStateChange((event, session) => {
-			if (event === 'SIGNED_IN' && session?.user) {
-				fetchUser(session.user)
-			} else if (event === 'SIGNED_OUT') {
-				setUser(null)
-			} else if (event === 'TOKEN_REFRESHED' && session?.user) {
-				// Optional: refresh user data nếu cần (nhưng thường không cần)
-				// fetchUser(session.user.id)
-			}
-			// Các event khác: USER_UPDATED, PASSWORD_RECOVERY... xử lý nếu cần
+		// Auth Listener
+		const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((event, session) => {
+			if (event === 'SIGNED_IN' && session?.user) fetchUser(session.user)
+			else if (event === 'SIGNED_OUT') setUser(null)
 		})
 
-		const authSubscription = subscription
-
-		// Cleanup
 		return () => {
+			window.clearInterval(statusPollingRef.current!)
+			window.removeEventListener('focus', handleFocus)
+			subscription.unsubscribe()
 			deepLinkSubscriptionRef.current?.unsubscribe()
-			deepLinkSubscriptionRef.current = null
-			authSubscription.unsubscribe()
-			if (statusPollingRef.current !== null) {
-				window.clearInterval(statusPollingRef.current)
-				statusPollingRef.current = null
-			}
-			window.removeEventListener('focus', handleWindowFocus)
-			document.removeEventListener(
-				'visibilitychange',
-				handleVisibilityChange,
-			)
+			if (eventUnlistenRef.current) eventUnlistenRef.current()
 			initialized.current = false
 		}
+		// ✅ CHỈ ĐƯA CÁC HÀM ỔN ĐỊNH VÀO DEPENDENCY: Bỏ 't' để tránh vòng lặp
 	}, [setBulkStatuses, setConnections, setIsLoading, setUser])
 
 	if (isLoading) {
 		return (
 			<div className='flex min-h-screen items-center justify-center'>
-				<Loader2Icon
-					className='animate-spin text-primary'
-					size={64}
-				/>
+				<Loader2Icon className='animate-spin text-primary' size={64} />
 			</div>
 		)
 	}

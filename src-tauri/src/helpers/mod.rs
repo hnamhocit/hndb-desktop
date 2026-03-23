@@ -6,7 +6,9 @@ mod saved_connections_store;
 mod vault_password;
 
 pub use build_conn_str::build_conn_str;
-pub use connection_access::ensure_connection_is_connected;
+pub use connection_access::{
+    check_and_disconnect_if_fatal, disconnect_due_to_error, ensure_connection_is_connected,
+};
 pub use get_config_by_id::get_config_by_id;
 pub use override_database::override_database;
 pub use saved_connections_store::{

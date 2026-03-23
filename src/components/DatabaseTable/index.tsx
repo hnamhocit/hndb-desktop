@@ -68,8 +68,8 @@ const DatabaseTable = ({
 		const mergedOriginal: TableRow[] = originalData.map((row, rowIndex) => {
 			const rowId = getRowKey(row, primaryColumnName, rowIndex)
 			return updateChangeset[rowId] ?
-					{ ...row, ...updateChangeset[rowId] }
-				:	row
+				{ ...row, ...updateChangeset[rowId] }
+				: row
 		})
 
 		return [...newRows, ...mergedOriginal]
@@ -171,7 +171,7 @@ const DatabaseTable = ({
 		virtualItems.length > 0 ?
 			rowVirtualizer.getTotalSize() -
 			(virtualItems[virtualItems.length - 1]?.end || 0)
-		:	0
+			: 0
 
 	useScrollEnd({
 		containerRef: parentRef,
@@ -233,7 +233,7 @@ const DatabaseTable = ({
 								className={clsx(
 									'group transition-colors duration-150 odd:[&>td]:bg-muted/20 even:[&>td]:bg-background hover:[&>td]:bg-primary/[0.045]',
 									isDeleted &&
-										'[&>td]:bg-red-100/80 dark:[&>td]:bg-red-950/30 opacity-70',
+									'[&>td]:bg-red-100/80 dark:[&>td]:bg-red-950/30 opacity-70',
 								)}>
 								{row.getVisibleCells().map((cell) => {
 									const columnSize = cell.column.getSize()

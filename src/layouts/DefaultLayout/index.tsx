@@ -138,13 +138,12 @@ const DefaultLayout = () => {
 			}
 
 			if (
-				!editableTarget &&
-				!hasCtrlOrMeta &&
-				!event.altKey &&
-				event.key === '+'
+				(hasCtrlOrMeta && (event.key.toLowerCase() === 't' || event.key === '+' || event.key === '=')) ||
+				(!editableTarget && !hasCtrlOrMeta && !event.altKey && event.key === '+')
 			) {
 				event.preventDefault()
 				triggerNewQueryShortcut()
+				return
 			}
 		}
 

@@ -10,7 +10,7 @@ const supabaseAnonKey =
 	'sb_publishable_MYEh8xfPAeMWQXXYUPcimw_hSL5HBbL'
 
 export const desktopOAuthScheme = 'hndb'
-export const desktopOAuthRedirectTo = `${desktopOAuthScheme}://auth/callback`
+export const desktopOAuthRedirectTo = 'https://www.hndb.space/auth/callback'
 
 const getOAuthPayloadFromUrl = (url: URL) => {
 	const hashParams = new URLSearchParams(
@@ -37,7 +37,7 @@ export const isDesktopOAuthCallbackUrl = (url: string) => {
 		const normalizedPath =
 			parsedUrl.pathname.endsWith('/') && parsedUrl.pathname.length > 1 ?
 				parsedUrl.pathname.slice(0, -1)
-			:	parsedUrl.pathname
+				: parsedUrl.pathname
 		const normalizedHost = parsedUrl.hostname.toLowerCase()
 
 		const looksLikeCallbackRoute =

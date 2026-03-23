@@ -1,12 +1,22 @@
+use std::str::FromStr;
+use sqlx::postgres::PgConnectOptions;
 use super::{mssql, DbClient};
 
 impl DbClient {
     pub async fn connect(driver: &str, url: &str) -> Result<Self, String> {
         match driver {
-            "postgres" => sqlx::PgPool::connect(url)
-                .await
-                .map(DbClient::Postgres)
-                .map_err(|e| e.to_string()),
+            "postgres" => {
+                let options = PgConnectOptions::from_str(url)
+                    .map_err(|e| e.to_string())?
+                    .statement_cache_capacity(0); // Fix Supabase PgBouncer "prepared statement already exists"
+
+                sqlx::postgres::PgPoolOptions::new()
+                    .test_before_acquire(false) // Prevent spamming background queries if connection drops
+                    .connect_with(options)
+                    .await
+                    .map(DbClient::Postgres)
+                    .map_err(|e| e.to_string())
+            }
             "mysql" | "mariadb" => sqlx::MySqlPool::connect(url)
                 .await
                 .map(DbClient::Mysql)

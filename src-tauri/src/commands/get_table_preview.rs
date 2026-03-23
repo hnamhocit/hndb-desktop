@@ -1,6 +1,6 @@
 use crate::db_client::DbClient;
 use crate::helpers::{
-    build_conn_str, ensure_connection_is_connected, get_config_by_id, override_database,
+    build_conn_str, check_and_disconnect_if_fatal, ensure_connection_is_connected, get_config_by_id, override_database,
 };
 use crate::state::AppState;
 use crate::types::TablePreviewResult;
@@ -57,12 +57,26 @@ pub async fn get_table_preview(
     let config = get_config_by_id(&app, id.as_str())?;
     let effective_config = override_database(&config, Some(database.as_str()))?;
     let conn_str = build_conn_str(&effective_config)?;
-    let client = DbClient::connect(&effective_config.driver, &conn_str).await?;
+    let client = match DbClient::connect(&effective_config.driver, &conn_str).await {
+        Ok(c) => c,
+        Err(e) => {
+            check_and_disconnect_if_fatal(&id, &state, &e).await;
+            return Err(e);
+        }
+    };
 
     let query = build_preview_query(&effective_config.driver, &database, &table, page, limit);
     let started_at = Instant::now();
-    let raw = client.run_sql(&query).await?;
+    let result = client.run_sql(&query).await;
     client.close().await;
+
+    let raw = match result {
+        Ok(r) => r,
+        Err(e) => {
+            check_and_disconnect_if_fatal(&id, &state, &e).await;
+            return Err(e);
+        }
+    };
 
     let rows =
         serde_json::from_str::<Vec<HashMap<String, Value>>>(&raw).map_err(|e| e.to_string())?;

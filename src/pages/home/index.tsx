@@ -2,7 +2,6 @@
 
 import {
 	CalendarDaysIcon,
-	Clock3Icon,
 	KeyboardIcon,
 	MapPinIcon,
 	MoonIcon,
@@ -91,10 +90,7 @@ export default function Home() {
 									<CalendarDaysIcon className='h-3.5 w-3.5 xl:h-4 xl:w-4' />
 									<span className='capitalize'>{dateLabel}</span>
 								</div>
-								<div className='inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 xl:px-3 py-1.5'>
-									<Clock3Icon className='h-3.5 w-3.5 xl:h-4 xl:w-4' />
-									<span>{timeLabel}</span>
-								</div>
+
 								<div className='inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 xl:px-3 py-1.5'>
 									<MapPinIcon className='h-3.5 w-3.5 xl:h-4 xl:w-4' />
 									<span>{regionLabel}</span>

@@ -1,6 +1,6 @@
 use crate::db_client::DbClient;
 use crate::helpers::{
-    build_conn_str, ensure_connection_is_connected, get_config_by_id, override_database,
+    build_conn_str, check_and_disconnect_if_fatal, ensure_connection_is_connected, get_config_by_id, override_database,
 };
 use crate::state::AppState;
 
@@ -96,10 +96,20 @@ pub async fn execute_query(
         let config = get_config_by_id(&app, id.as_str())?;
         let effective_config = override_database(&config, Some(target_database))?;
         let conn_str = build_conn_str(&effective_config)?;
-        let client = DbClient::connect(&effective_config.driver, &conn_str).await?;
+        let client = match DbClient::connect(&effective_config.driver, &conn_str).await {
+            Ok(c) => c,
+            Err(e) => {
+                check_and_disconnect_if_fatal(&id, &state, &e).await;
+                return Err(e);
+            }
+        };
 
         let result = client.run_sql(&query).await;
         client.close().await;
+
+        if let Err(ref err) = result {
+            check_and_disconnect_if_fatal(&id, &state, err).await;
+        }
 
         return result;
     }
@@ -107,16 +117,33 @@ pub async fn execute_query(
     let connections_map = state.active_connections.lock().await;
 
     if let Some(client) = connections_map.get(&id) {
-        let result_json = client.run_sql(&query).await?;
+        let result = client.run_sql(&query).await;
+        if let Err(ref err) = result {
+            // Drop explicitly
+            drop(connections_map);
+            check_and_disconnect_if_fatal(&id, &state, err).await;
+            return result;
+        }
 
-        Ok(result_json)
+        result
     } else {
+        drop(connections_map);
         let config = get_config_by_id(&app, id.as_str())?;
         let conn_str = build_conn_str(&config)?;
-        let client = DbClient::connect(&config.driver, &conn_str).await?;
+        let client = match DbClient::connect(&config.driver, &conn_str).await {
+            Ok(c) => c,
+            Err(e) => {
+                check_and_disconnect_if_fatal(&id, &state, &e).await;
+                return Err(e);
+            }
+        };
 
         let result = client.run_sql(&query).await;
         client.close().await;
+
+        if let Err(ref err) = result {
+            check_and_disconnect_if_fatal(&id, &state, err).await;
+        }
 
         result
     }

@@ -156,6 +156,10 @@ const humanizeDatabaseError = (message: string): string => {
 		})
 	}
 
+	if (normalized.includes('connection is disconnected')) {
+		return t('query.connectionDisconnected' as TranslationKey)
+	}
+
 	return message
 }
 
@@ -171,6 +175,6 @@ export const formatErrorMessage = (
 
 export const notifyError = (error: unknown, fallbackMessage: string) => {
 	const message = formatErrorMessage(error, fallbackMessage)
-	toast.error(message, { position: 'top-center' })
+	toast.error(message, { id: message, position: 'top-center' })
 	return message
 }
