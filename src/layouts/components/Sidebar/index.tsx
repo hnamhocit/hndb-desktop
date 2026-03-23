@@ -73,7 +73,7 @@ const Sidebar = ({ isMobileOpen = false, onCloseMobile }: SidebarProps) => {
 					'fixed inset-0 z-30 bg-black/45 backdrop-blur-[1px] transition-opacity md:hidden',
 					isMobileOpen ?
 						'opacity-100 pointer-events-auto'
-					:	'opacity-0 pointer-events-none',
+						: 'opacity-0 pointer-events-none',
 				)}
 				onClick={onCloseMobile}
 			/>
@@ -81,13 +81,13 @@ const Sidebar = ({ isMobileOpen = false, onCloseMobile }: SidebarProps) => {
 			<div
 				className={clsx(
 					'border-r overflow-y-auto bg-muted/40',
-					'fixed top-12 bottom-0 left-0 z-40 w-[86vw] max-w-92 transition-transform duration-200 md:static md:top-auto md:bottom-auto md:left-auto md:z-auto md:w-92 md:shrink-0',
+					'fixed top-12 xl:top-14 bottom-0 left-0 z-40 w-[84vw] max-w-80 xl:max-w-92 transition-transform duration-200 md:static md:top-auto md:bottom-auto md:left-auto md:z-auto md:w-80 xl:w-92 md:shrink-0',
 					isMobileOpen ? 'translate-x-0' : '-translate-x-full',
-				'md:translate-x-0',
+					'md:translate-x-0',
 				)}>
 				{connectionId ?
 					<Databases dataSourceId={connectionId} />
-				:	<div className='px-4 py-6 text-sm text-muted-foreground'>
+					: <div className='px-4 py-6 text-sm text-muted-foreground'>
 						{t('sidebar.selectConnection')}
 					</div>
 				}

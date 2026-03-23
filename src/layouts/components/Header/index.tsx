@@ -95,9 +95,9 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.3, ease: 'easeOut' }}
 			// Giảm height xuống h-11, bỏ select text để giống app native
-			className='h-14 shrink-0 border-b border-border bg-background flex items-center justify-between px-3 select-none'>
+			className='h-12 xl:h-14 shrink-0 border-b border-border bg-background flex items-center justify-between px-2.5 xl:px-3 select-none'>
 			{/* 1. TRÁI: Logo & Tên App (Chiếm 1/3) */}
-			<div className='flex items-center gap-2 w-1/3'>
+			<div className='flex min-w-0 flex-1 items-center gap-2'>
 				<motion.button
 					whileTap={{ scale: 0.95 }}
 					onClick={onToggleSidebar}
@@ -108,20 +108,20 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 				<motion.div whileHover={{ scale: 1.05 }}>
 					<Link
 						to='/'
-						className='flex items-center gap-3'>
+						className='flex items-center gap-2.5 xl:gap-3'>
 						<img
 							src='/logo.png'
 							alt='Logo'
-							width={32}
-							height={32}
-							className='object-fit rounded-sm'
+							width={30}
+							height={30}
+							className='h-7 w-7 xl:h-8 xl:w-8 object-fit rounded-sm'
 						/>
 
 						<div>
-							<span className='text-sm font-bold tracking-widest text-foreground'>
+							<span className='text-[13px] xl:text-sm font-bold tracking-widest text-foreground'>
 								HNDB
 							</span>
-							<div className='text-xs font-medium text-yellow-500'>
+							<div className='text-[10px] xl:text-xs font-medium text-yellow-500'>
 								Community edition
 							</div>
 						</div>
@@ -130,7 +130,7 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 			</div>
 
 			{/* 2. GIỮA: Command Palette / Search (Chiếm 1/3, căn giữa tuyệt đối) */}
-			<div className='flex justify-center w-1/3 max-w-md'>
+			<div className='hidden lg:flex justify-center flex-1 px-3 max-w-xl'>
 				<motion.div
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
@@ -143,21 +143,21 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 			</div>
 
 			{/* 3. PHẢI: Các công cụ & User (Chiếm 1/3, căn phải) */}
-			<div className='flex items-center justify-end gap-1.5 w-1/3'>
+			<div className='flex min-w-0 flex-1 items-center justify-end gap-1 xl:gap-1.5'>
 				<motion.div whileTap={{ scale: 0.95 }}>
 					<button
 						onClick={() => void toggleTheme()}
 						className={toolbarButtonClass}>
 						{isDarkMode ?
 							<MoonIcon className='w-4 h-4' />
-						:	<SunIcon className='w-4 h-4' />}
+							: <SunIcon className='w-4 h-4' />}
 					</button>
 				</motion.div>
 
 				<motion.div whileTap={{ scale: 0.95 }}>
 					<button
 						onClick={() => void toggleLanguage()}
-						className='inline-flex h-7 items-center justify-center rounded-md px-2 text-[10px] font-bold text-muted-foreground hover:bg-muted hover:text-foreground transition-colors'>
+						className='inline-flex h-6 xl:h-7 items-center justify-center rounded-md px-2 text-[10px] font-bold text-muted-foreground hover:bg-muted hover:text-foreground transition-colors'>
 						{language.toUpperCase()}
 					</button>
 				</motion.div>
@@ -172,7 +172,7 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 								<motion.button
 									whileHover={{ scale: 1.05 }}
 									className='ml-1 outline-none rounded-full ring-offset-background focus-visible:ring-2 focus-visible:ring-ring'>
-									<Avatar className='h-6 w-6 border border-border/50 shadow-sm'>
+									<Avatar className='h-5 w-5 xl:h-6 xl:w-6 border border-border/50 shadow-sm'>
 										<AvatarImage
 											src={
 												user.photo_url ||
@@ -215,12 +215,12 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 									<LogOutIcon className='w-4 h-4 mr-2' />
 									{isLoggingOut ?
 										t('common.loggingOut')
-									:	t('common.logout')}
+										: t('common.logout')}
 								</DropdownMenuItem>
 							</DropdownMenuContent>
 						</DropdownMenu>
 					</>
-				:	null}
+					: null}
 			</div>
 		</motion.header>
 	)

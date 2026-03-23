@@ -36,7 +36,7 @@ const Tabs = () => {
 	}
 
 	return (
-		<div className='h-12 border-b flex items-end overflow-x-scroll'>
+		<div className='h-10 xl:h-12 border-b flex items-end overflow-x-scroll'>
 			{tabs.map((tab, index) => (
 				<Tab
 					key={tab.id}
@@ -44,12 +44,12 @@ const Tabs = () => {
 					index={index}
 				/>
 			))}
-				<div
-					data-hotkey-new-query
-					className='shrink-0 h-full cursor-pointer relative min-w-12 hover:bg-primary hover:text-primary-foreground transition-colors duration-300 select-none flex items-center justify-center border-r px-4 sm:px-0'
-					onClick={handleNewQueryTab}>
-					<PlusIcon />
-				</div>
+			<div
+				data-hotkey-new-query
+				className='shrink-0 h-full cursor-pointer relative min-w-10 xl:min-w-12 hover:bg-primary hover:text-primary-foreground transition-colors duration-300 select-none flex items-center justify-center border-r px-3 sm:px-0'
+				onClick={handleNewQueryTab}>
+				<PlusIcon className='h-4 w-4 xl:h-5 xl:w-5' />
+			</div>
 		</div>
 	)
 }

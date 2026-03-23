@@ -156,7 +156,7 @@ const DefaultLayout = () => {
 		<div className='h-screen overflow-hidden'>
 			<Header onToggleSidebar={() => setIsMobileSidebarOpen((v) => !v)} />
 
-			<div className='flex h-[calc(100vh-14*4px)]'>
+			<div className='flex h-[calc(100vh-3rem)] xl:h-[calc(100vh-3.5rem)]'>
 				<Sidebar
 					isMobileOpen={isMobileSidebarOpen}
 					onCloseMobile={() => setIsMobileSidebarOpen(false)}

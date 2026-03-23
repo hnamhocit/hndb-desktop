@@ -18,13 +18,11 @@
 	--color-foreground: var(--foreground);
 
 	--font-sans: var(--app-font-family, 'Geist Variable', sans-serif);
-	--font-mono: var(
-		--app-mono-font-family,
-		'Geist Mono Variable',
-		'Geist Mono',
-		ui-monospace,
-		monospace
-	);
+	--font-mono: var(--app-mono-font-family,
+			'Geist Mono Variable',
+			'Geist Mono',
+			ui-monospace,
+			monospace);
 
 	--color-sidebar-ring: var(--sidebar-ring);
 	--color-sidebar-border: var(--sidebar-border);
@@ -75,6 +73,7 @@
 
 :root {
 	--radius: 0.625rem;
+	--app-density-scale: 1;
 
 	/* Base */
 	--background: oklch(0.985 0.004 240);
@@ -184,7 +183,7 @@
 
 	html {
 		@apply font-sans;
-		font-size: var(--app-font-size, 16px);
+		font-size: calc(var(--app-font-size, 16px) * var(--app-density-scale, 1));
 	}
 
 	body {
@@ -199,6 +198,7 @@
 	}
 
 	@media (prefers-reduced-motion: no-preference) {
+
 		.theme-switching,
 		.theme-switching *,
 		.theme-switching *::before,
@@ -211,5 +211,17 @@
 				stroke 220ms ease,
 				box-shadow 220ms ease;
 		}
+	}
+}
+
+@media (max-width: 1440px) {
+	:root {
+		--app-density-scale: 0.94;
+	}
+}
+
+@media (max-width: 1280px) {
+	:root {
+		--app-density-scale: 0.88;
 	}
 }

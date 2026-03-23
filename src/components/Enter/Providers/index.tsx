@@ -62,7 +62,7 @@ const Providers = () => {
 								prompt: 'consent',
 							},
 						}
-					:	{}),
+						: {}),
 				},
 			})
 
@@ -78,6 +78,7 @@ const Providers = () => {
 			}
 
 			await openUrl(data.url) // mở system browser
+
 			scheduleUnlockFallback()
 		} catch (error) {
 			notifyError(

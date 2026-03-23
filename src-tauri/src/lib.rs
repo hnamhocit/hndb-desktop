@@ -23,7 +23,7 @@ pub fn run() {
     {
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             use tauri_plugin_deep_link::DeepLinkExt;
-            if let Some(url) = argv.get(1) {
+            if let Some(_url) = argv.get(1) {
                 let _ = app.deep_link().get_current();
             }
         }));
