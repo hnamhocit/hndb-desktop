@@ -52,6 +52,15 @@ impl DbClient {
                     .map(|row| row.try_get::<String, _>("name").map_err(|e| e.to_string()))
                     .collect()
             }
+            DbClient::Mssql(connection_string) => {
+                let rows = super::mssql::query_json_rows(
+                    connection_string,
+                    "SELECT name FROM sys.tables WHERE is_ms_shipped = 0 ORDER BY name",
+                )
+                .await?;
+
+                Ok(super::mssql::extract_string_column(rows, "name"))
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-use super::DbClient;
+use super::{mssql, DbClient};
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use serde_json::{json, Map, Value as JsonValue};
 use sqlx::{Column, Row, TypeInfo};
@@ -235,7 +235,15 @@ impl DbClient {
             DbClient::Postgres(pool) => Self::run_pg_query(pool, sql).await,
             DbClient::Mysql(pool) => Self::run_mysql_query(pool, sql).await,
             DbClient::Sqlite(pool) => Self::run_sqlite_query(pool, sql).await,
+            DbClient::Mssql(connection_string) => {
+                Self::run_mssql_query(connection_string, sql).await
+            }
         }
+    }
+
+    async fn run_mssql_query(connection_string: &str, sql: &str) -> Result<String, String> {
+        let rows = mssql::query_json_rows(connection_string, sql).await?;
+        Ok(serde_json::to_string(&rows).unwrap_or_else(|_| "[]".to_string()))
     }
 
     async fn run_sqlite_query(pool: &sqlx::SqlitePool, sql: &str) -> Result<String, String> {

@@ -3,6 +3,8 @@ import { RotateCcwIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { FieldDescription, FieldSeparator } from '@/components/ui/field'
+import { useI18n } from '@/hooks'
+import type { TranslationKey } from '@/i18n/messages'
 import { Input } from '@/components/ui/input'
 import {
 	Select,
@@ -42,6 +44,7 @@ const AdvancedTab = ({
 	onSettingChange,
 	onSettingReset,
 }: AdvancedTabProps) => {
+	const { t } = useI18n()
 	const overrideMap = new Map(
 		driverProperties.map((property) => [property.key, property.value]),
 	)
@@ -65,10 +68,10 @@ const AdvancedTab = ({
 			{!isReady && (
 				<div className='rounded-xl border border-dashed border-border px-4 py-5 text-sm text-muted-foreground'>
 					{isLoading ?
-						'Loading advanced settings from the current connection...'
+						t('dataSource.advanced.loadingCurrent')
 					: isEditMode ?
-						'Test connection to refresh advanced settings after you change the connection config.'
-					:	'Test connection successfully first to load advanced settings.'}
+						t('dataSource.advanced.testToRefresh')
+					:	t('dataSource.advanced.testFirst')}
 				</div>
 			)}
 
@@ -76,21 +79,19 @@ const AdvancedTab = ({
 				<>
 					<div className='rounded-xl border border-border/60 bg-muted/20 px-4 py-3'>
 						<p className='text-sm font-medium text-foreground'>
-							Advanced settings loaded
+							{t('dataSource.advanced.loaded')}
 						</p>
 						<p className='mt-1 text-sm text-muted-foreground'>
-							{serverVersion || 'Server version unavailable'}
+							{serverVersion || t('dataSource.advanced.serverVersionUnavailable')}
 						</p>
 						<p className='mt-2 text-xs text-muted-foreground'>
-							Only changed settings are saved into{' '}
-							<code>driverProperties</code>.
+							{t('dataSource.advanced.onlyChangedSaved')}
 						</p>
 					</div>
 
 					{advancedSettings.length === 0 && (
 						<div className='rounded-xl border border-dashed border-border px-4 py-5 text-sm text-muted-foreground'>
-							Connected successfully, but this driver did not
-							return any advanced settings.
+							{t('dataSource.advanced.noSettings')}
 						</div>
 					)}
 
@@ -127,6 +128,7 @@ const AdvancedTab = ({
 																{renderSettingInput({
 																	setting,
 																	currentValue,
+																	t,
 																	onChange:
 																		onSettingChange,
 																})}
@@ -167,14 +169,17 @@ const AdvancedTab = ({
 
 																<p>
 																	{!setting.is_editable &&
-																		'Read only'}
+																		t('dataSource.advanced.readOnly')}
 																	{!setting.is_editable &&
 																		(setting.min_val ||
 																			setting.max_val) &&
 																		' • '}
 																	{(setting.min_val ||
 																		setting.max_val) &&
-																		`Range: ${setting.min_val || 'min'} - ${setting.max_val || 'max'}`}
+																		t('dataSource.advanced.range', {
+																			min: setting.min_val || 'min',
+																			max: setting.max_val || 'max',
+																		})}
 																</p>
 															</div>
 														)}
@@ -223,10 +228,12 @@ const toBooleanString = (checked: boolean, sourceValue: string) => {
 const renderSettingInput = ({
 	setting,
 	currentValue,
+	t,
 	onChange,
 }: {
 	setting: DbSetting
 	currentValue: string
+	t: (key: TranslationKey, params?: Record<string, string | number>) => string
 	onChange: (
 		settingName: string,
 		nextValue: string,
@@ -235,7 +242,7 @@ const renderSettingInput = ({
 }) => {
 	if (setting.setting_type === 'enum' && setting.enum_values?.length) {
 		const normalizedOptions = setting.enum_values.map((option) => ({
-			label: option === '' ? '(empty)' : option,
+			label: option === '' ? t('dataSource.advanced.emptyOption') : option,
 			rawValue: option,
 			value: option === '' ? EMPTY_SELECT_SENTINEL : option,
 		}))
@@ -257,7 +264,7 @@ const renderSettingInput = ({
 				}
 				disabled={!setting.is_editable}>
 				<SelectTrigger className='w-full'>
-					<SelectValue placeholder='Select a value' />
+					<SelectValue placeholder={t('dataSource.advanced.selectValue')} />
 				</SelectTrigger>
 				<SelectContent>
 					{normalizedOptions.map((option) => (

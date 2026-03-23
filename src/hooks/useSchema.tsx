@@ -7,8 +7,10 @@ import {
 	normalizeSchemaRecord,
 	notifyError,
 } from '@/utils'
+import { useI18n } from './useI18n'
 
 export const useSchema = (connectionId: string, database: string) => {
+	const { t } = useI18n()
 	const connectionStatus = useConnectionStore(
 		(state) => state.statuses[connectionId],
 	)
@@ -44,21 +46,22 @@ export const useSchema = (connectionId: string, database: string) => {
 
 				setSchema(cacheKey, normalizeSchemaRecord(data.data))
 			} catch (error) {
-				notifyError(error, 'Failed to fetch schema.')
+				notifyError(error, t('errors.failedFetchSchema'))
 			} finally {
 				inFlightRef.current = false
 				setIsLoading(false)
 			}
 		},
-		[
-			connectionId,
-			database,
-			cacheKey,
-			hasCachedSchema,
-			isDisconnected,
-			setSchema,
-		],
-	)
+			[
+				connectionId,
+				database,
+				cacheKey,
+				hasCachedSchema,
+				isDisconnected,
+				setSchema,
+				t,
+			],
+		)
 
 	useEffect(() => {
 		void fetchSchema()

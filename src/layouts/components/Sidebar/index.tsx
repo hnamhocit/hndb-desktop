@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import clsx from 'clsx'
 
-import { useActiveTab } from '@/hooks'
+import { useActiveTab, useI18n } from '@/hooks'
 import { connectionService } from '@/services'
 import {
 	useActiveStore,
@@ -19,6 +19,7 @@ interface SidebarProps {
 
 const Sidebar = ({ isMobileOpen = false, onCloseMobile }: SidebarProps) => {
 	const [connectingId, setConnectingId] = useState<string | null>(null)
+	const { t } = useI18n()
 	const activeTab = useActiveTab()
 	const { updateTab } = useTabsStore()
 	const statuses = useConnectionStore((state) => state.statuses)
@@ -52,7 +53,7 @@ const Sidebar = ({ isMobileOpen = false, onCloseMobile }: SidebarProps) => {
 			updateStatus(nextConnectionId, true)
 		} catch (error) {
 			updateStatus(nextConnectionId, false)
-			notifyError(error, 'Failed to connect data source.')
+			notifyError(error, t('errors.failedConnectDataSource'))
 		} finally {
 			setConnectingId((currentId) =>
 				currentId === nextConnectionId ? null : currentId,
@@ -87,7 +88,7 @@ const Sidebar = ({ isMobileOpen = false, onCloseMobile }: SidebarProps) => {
 				{connectionId ?
 					<Databases dataSourceId={connectionId} />
 				:	<div className='px-4 py-6 text-sm text-muted-foreground'>
-						Select a connection to load databases.
+						{t('sidebar.selectConnection')}
 					</div>
 				}
 			</div>

@@ -112,7 +112,7 @@ export default function Home() {
 									[t('home.actionNewQuery'), '+'],
 									[t('home.actionSwitchTab'), 'Alt + [ ]'],
 									[t('home.actionRunQuery'), 'Cmd/Ctrl + Enter'],
-									[t('home.actionFocusSidebar'), 'Cmd/Ctrl + B'],
+									[t('home.actionQuickSearch'), 'Cmd/Ctrl + K'],
 								].map(([label, shortcut]) => (
 									<div
 										key={label}
@@ -130,6 +130,6 @@ export default function Home() {
 			</div>
 		: activeTab.type === 'query' ? <QueryBuilder />
 		: activeTab.type === 'table' ? <TableDetail />
-		: <div>Unknown tab type</div>
+		: <div>{t('home.unknownTabType')}</div>
 	)
 }

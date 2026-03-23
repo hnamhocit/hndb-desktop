@@ -27,15 +27,55 @@ const syncConnectionStatusesInBackground = () => {
 const getCommandName = (query: string) =>
 	query.trim().split(/\s+/)[0]?.toUpperCase() || null
 
+const MAX_SELECT_STAR_ROWS = 50_000
+const SELECT_STAR_FROM_REGEX = /^SELECT\s+\*\s+FROM\b/i
+
+const stripSqlComments = (query: string) =>
+	query
+		.replace(/\/\*[\s\S]*?\*\//g, ' ')
+		.replace(/--.*$/gm, ' ')
+		.trim()
+
+const trimTrailingSemicolons = (query: string) => query.replace(/;+\s*$/, '')
+
+const shouldCapSelectStarRows = (query: string) => {
+	const normalizedQuery = trimTrailingSemicolons(stripSqlComments(query))
+
+	return (
+		Boolean(normalizedQuery) &&
+		SELECT_STAR_FROM_REGEX.test(normalizedQuery) &&
+		!/\bLIMIT\b/i.test(normalizedQuery)
+	)
+}
+
+const applySelectStarRowCap = (query: string) => {
+	if (!shouldCapSelectStarRows(query)) {
+		return { query, wasCapped: false }
+	}
+
+	const queryWithoutSemicolons = trimTrailingSemicolons(query.trim())
+	return {
+		query: `${queryWithoutSemicolons} LIMIT ${MAX_SELECT_STAR_ROWS}`,
+		wasCapped: true,
+	}
+}
+
+const isExplainableQuery = (query: string) => {
+	const firstCommand = getCommandName(stripSqlComments(query))
+	return firstCommand === 'SELECT' || firstCommand === 'WITH'
+}
+
 const invokeQueryRows = async (
 	connectionId: string,
 	database: string | null,
 	query: string,
+	forced: boolean = false,
 ) => {
 	const raw = await invoke<string>('execute_query', {
 		id: connectionId,
 		database,
 		query,
+		forced,
 	})
 
 	return JSON.parse(raw) as Record<string, unknown>[]
@@ -45,10 +85,13 @@ const mapRowsToQueryResult = (
 	rows: Record<string, unknown>[],
 	query: string,
 	startedAt: number,
+	metadata?: {
+		isLimited?: boolean
+	},
 ) => ({
 	rows,
 	durationMs: Date.now() - startedAt,
-	isLimited: false,
+	isLimited: metadata?.isLimited ?? false,
 	affectedRows: null,
 	command: getCommandName(query),
 	sizeBytes: new Blob([JSON.stringify(rows)]).size,
@@ -110,12 +153,22 @@ export const connectionService = {
 		connectionId: string,
 		database: string | null,
 		query: string,
-		_forced: boolean = false,
+		forced: boolean = false,
 	) {
 		const startedAt = Date.now()
-		const rows = await invokeQueryRows(connectionId, database, query)
+		const { query: queryToRun, wasCapped } = applySelectStarRowCap(query)
+		const rows = await invokeQueryRows(
+			connectionId,
+			database,
+			queryToRun,
+			forced,
+		)
 		syncConnectionStatusesInBackground()
-		return wrapData(mapRowsToQueryResult(rows, query, startedAt))
+		return wrapData(
+			mapRowsToQueryResult(rows, query, startedAt, {
+				isLimited: wasCapped && rows.length >= MAX_SELECT_STAR_ROWS,
+			}),
+		)
 	},
 
 	async runQuery(
@@ -200,10 +253,18 @@ export const connectionService = {
 	},
 
 	async queryPlan(
-		_connectionId: string,
-		_query: string,
-		_database: string,
+		connectionId: string,
+		query: string,
+		database: string | null,
 	) {
-		return wrapData(null)
+		if (!query.trim() || !isExplainableQuery(query)) {
+			return wrapData(null)
+		}
+
+		const explainQuery = `EXPLAIN ${trimTrailingSemicolons(query.trim())}`
+		const rows = await invokeQueryRows(connectionId, database, explainQuery)
+		syncConnectionStatusesInBackground()
+
+		return wrapData(rows)
 	},
 }

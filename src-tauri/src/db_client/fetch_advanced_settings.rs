@@ -8,6 +8,9 @@ impl DbClient {
             DbClient::Postgres(pool) => Self::fetch_pg_settings(pool).await,
             DbClient::Mysql(pool) => Self::fetch_mysql_settings(pool).await,
             DbClient::Sqlite(pool) => Self::fetch_sqlite_settings(pool).await,
+            DbClient::Mssql(connection_string) => {
+                Self::fetch_mssql_settings(connection_string).await
+            }
         }
     }
 
@@ -177,5 +180,35 @@ impl DbClient {
         }
 
         settings
+    }
+
+    pub(crate) async fn fetch_mssql_settings(connection_string: &str) -> Vec<DbSetting> {
+        let rows = match super::mssql::query_json_rows(
+            connection_string,
+            "SELECT name, CAST(value_in_use AS NVARCHAR(4000)) AS value FROM sys.configurations ORDER BY name",
+        )
+        .await
+        {
+            Ok(rows) => rows,
+            Err(_) => return vec![],
+        };
+
+        rows.into_iter()
+            .map(|row| DbSetting {
+                name: super::mssql::get_case_insensitive(&row, "name")
+                    .and_then(super::mssql::json_value_to_string)
+                    .unwrap_or_default(),
+                value: super::mssql::get_case_insensitive(&row, "value")
+                    .and_then(super::mssql::json_value_to_string)
+                    .unwrap_or_default(),
+                category: Some("server".to_string()),
+                description: None,
+                setting_type: "string".to_string(),
+                enum_values: None,
+                min_val: None,
+                max_val: None,
+                is_editable: true,
+            })
+            .collect()
     }
 }

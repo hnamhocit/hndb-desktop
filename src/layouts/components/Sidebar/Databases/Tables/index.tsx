@@ -2,7 +2,7 @@ import clsx from 'clsx'
 import { CornerDownLeftIcon, Table2Icon } from 'lucide-react'
 import { useNavigate } from 'react-router'
 
-import { useActiveTab, useTables } from '@/hooks'
+import { useActiveTab, useI18n, useTables } from '@/hooks'
 import { ITab } from '@/interfaces'
 import {
 	useActiveStore,
@@ -16,6 +16,7 @@ interface TablesProps {
 
 const Tables = ({ dataSourceId, database }: TablesProps) => {
 	const navigate = useNavigate()
+	const { t } = useI18n()
 	const activeTab = useActiveTab()
 	const {
 		setConnectionId,
@@ -69,7 +70,7 @@ const Tables = ({ dataSourceId, database }: TablesProps) => {
 	if (isLoading) {
 		return (
 			<div className='px-3 py-3 text-center font-mono text-xs text-muted-foreground'>
-				Loading tables...
+				{t('sidebar.loadingTables')}
 			</div>
 		)
 	}
@@ -77,7 +78,7 @@ const Tables = ({ dataSourceId, database }: TablesProps) => {
 	if (tables.length === 0) {
 		return (
 			<div className='px-3 py-3 text-center font-mono text-xs text-muted-foreground'>
-				No tables found.
+				{t('sidebar.noTablesFound')}
 			</div>
 		)
 	}

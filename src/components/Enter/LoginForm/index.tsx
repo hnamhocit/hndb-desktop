@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
+import { useMemo } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -12,11 +13,12 @@ import {
 import { useI18n } from '@/hooks'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
-import { loginSchema, LoginSchema } from '@/schemas'
+import { createLoginSchema, LoginSchema } from '@/schemas'
 import { authService } from '@/services'
 
 const LoginForm = () => {
 	const { t } = useI18n()
+	const loginSchema = useMemo(() => createLoginSchema(t), [t])
 
 	const {
 		handleSubmit,
@@ -31,14 +33,19 @@ const LoginForm = () => {
 		try {
 			const { error } = await authService.login(values)
 			if (error) {
-				toast.error('Login failed: ' + error.message, {
+				toast.error(
+					t('auth.loginFailed', {
+						message: error.message,
+					}),
+					{
 					position: 'top-center',
-				})
+					},
+				)
 			}
 
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		} catch (error) {
-			toast.error('An unexpected error occurred during login.', {
+			toast.error(t('auth.loginUnexpectedError'), {
 				position: 'top-center',
 			})
 		}

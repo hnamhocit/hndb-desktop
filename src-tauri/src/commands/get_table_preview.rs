@@ -11,6 +11,7 @@ use std::time::Instant;
 fn quote_identifier(driver: &str, value: &str) -> String {
     match driver {
         "mysql" | "mariadb" => format!("`{}`", value.replace('`', "``")),
+        "mssql" => format!("[{}]", value.replace(']', "]]")),
         _ => format!("\"{}\"", value.replace('"', "\"\"")),
     }
 }
@@ -27,6 +28,13 @@ fn build_preview_query(driver: &str, database: &str, table: &str, page: u64, lim
     } else {
         quote_identifier(driver, table)
     };
+
+    if driver == "mssql" {
+        return format!(
+            "SELECT * FROM {} ORDER BY (SELECT NULL) OFFSET {} ROWS FETCH NEXT {} ROWS ONLY",
+            table_ref, offset, limit
+        );
+    }
 
     format!(
         "SELECT * FROM {} LIMIT {} OFFSET {}",

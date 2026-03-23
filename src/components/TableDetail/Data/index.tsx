@@ -4,7 +4,7 @@ import { CheckCircle2Icon } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import DatabaseTable from '@/components/DatabaseTable'
-import { useActiveTab, useSchema } from '@/hooks'
+import { useActiveTab, useI18n, useSchema } from '@/hooks'
 import { IQueryResult } from '@/interfaces'
 import { connectionService } from '@/services'
 import { useConnectionStore, useDataEditorStore } from '@/stores'
@@ -19,6 +19,7 @@ import Actions from './Actions'
 import QueryResultFooter from './QueryResultFooter'
 
 const Data = () => {
+	const { t } = useI18n()
 	const [resultMeta, setResultMeta] = useState<IQueryResult | null>(null)
 	const [rows, setRows] = useState<Record<string, unknown>[]>([])
 	const [isInitialLoading, setIsInitialLoading] = useState(false)
@@ -113,7 +114,7 @@ const Data = () => {
 					initializeTable(tablePath, mergedRows)
 				}
 			} catch (error) {
-				notifyError(error, 'Failed to fetch table preview.')
+				notifyError(error, t('errors.failedFetchTablePreview'))
 			} finally {
 				if (cycleId !== loadCycleRef.current) {
 					return
@@ -199,7 +200,7 @@ const Data = () => {
 	if (isDisconnected) {
 		return (
 			<div className='flex h-64 items-center justify-center px-6 text-center text-sm text-muted-foreground'>
-				Connection is disconnected. Connect again to load table data.
+				{t('table.states.disconnected')}
 			</div>
 		)
 	}
@@ -221,8 +222,8 @@ const Data = () => {
 					/>
 					<span>
 						{isSchemaLoading && columns.length === 0 ?
-							'Loading schema...'
-						:	'Loading data...'}
+							t('table.states.loadingSchema')
+						:	t('table.states.loadingData')}
 					</span>
 				</div>
 			:	<DatabaseTable

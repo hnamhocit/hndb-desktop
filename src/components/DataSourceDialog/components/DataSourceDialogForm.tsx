@@ -9,6 +9,7 @@ import AdvancedTab from '@/components/DataSourceDialog/components/AdvancedTab'
 import GeneralTab from '@/components/DataSourceDialog/components/GeneralTab'
 import { Button } from '@/components/ui/button'
 import { FieldError, FieldLabel } from '@/components/ui/field'
+import { useI18n } from '@/hooks'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
@@ -69,6 +70,7 @@ const DataSourceDialogForm = ({
 	onTestConnection,
 	onValidateSettingOverrides,
 }: DataSourceDialogFormProps) => {
+	const { t } = useI18n()
 	const {
 		control,
 		handleSubmit,
@@ -81,7 +83,7 @@ const DataSourceDialogForm = ({
 			className='flex h-[72vh] flex-col overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300'>
 			<div className='flex-1 space-y-5 overflow-y-auto px-6 py-5'>
 				<section className='space-y-2'>
-					<FieldLabel>Name</FieldLabel>
+					<FieldLabel>{t('dataSource.form.name')}</FieldLabel>
 					<Controller
 						control={control}
 						name='name'
@@ -89,7 +91,7 @@ const DataSourceDialogForm = ({
 							<Input
 								{...field}
 								type='text'
-								placeholder='e.g. My Production DB'
+								placeholder={t('dataSource.form.namePlaceholder')}
 								value={field.value || ''}
 							/>
 						)}
@@ -114,11 +116,13 @@ const DataSourceDialogForm = ({
 					}}
 					className='gap-4'>
 					<TabsList className='w-fit'>
-						<TabsTrigger value='general'>General</TabsTrigger>
+						<TabsTrigger value='general'>
+							{t('dataSource.form.tab.general')}
+						</TabsTrigger>
 						<TabsTrigger
 							value='advanced'
 							disabled={!isEditMode && !isTestSuccessful}>
-							Advanced
+							{t('dataSource.form.tab.advanced')}
 						</TabsTrigger>
 					</TabsList>
 
@@ -164,23 +168,23 @@ const DataSourceDialogForm = ({
 							{isTesting ?
 								<>
 									<Loader2Icon className='mr-2 h-4 w-4 animate-spin' />
-									Testing...
+									{t('dataSource.form.testing')}
 								</>
 							: isValidatingOverrides ?
 								<>
 									<Loader2Icon className='mr-2 h-4 w-4 animate-spin' />
-									Validating...
+									{t('dataSource.form.validating')}
 								</>
 							: isOverridesValidated ?
 								<>
 									<CheckCircle2Icon className='mr-2 h-4 w-4' />
-									Validated
+									{t('dataSource.form.validated')}
 								</>
 							: requiresValidationBeforeSubmit && isTestSuccessful ?
-								'Validate settings'
+								t('dataSource.form.validateSettings')
 							: isEditMode ?
-								'Test connection (optional)'
-							:	'Test connection'}
+								t('dataSource.form.testConnectionOptional')
+							:	t('dataSource.form.testConnection')}
 						</Button>
 
 						<Button
@@ -190,7 +194,9 @@ const DataSourceDialogForm = ({
 								(requiresValidationBeforeSubmit &&
 									(!isTestSuccessful || !isOverridesValidated))
 							}>
-							{isEditMode ? 'Save Connection' : 'Connect'}
+							{isEditMode ?
+								t('dataSource.form.saveConnection')
+							:	t('dataSource.form.connect')}
 						</Button>
 					</div>
 				</div>

@@ -2,6 +2,7 @@
 
 import { useNavigate } from 'react-router'
 
+import { useI18n } from '@/hooks'
 import { ITab } from '@/interfaces'
 import { useActiveStore, useTabsStore } from '@/stores'
 import { PlusIcon } from 'lucide-react'
@@ -9,6 +10,7 @@ import Tab from './Tab'
 
 const Tabs = () => {
 	const navigate = useNavigate()
+	const { t } = useI18n()
 	const { tabs, setTabs, commitContent } = useTabsStore()
 	const { setActiveTabId, connectionId, database, table } = useActiveStore()
 
@@ -16,7 +18,9 @@ const Tabs = () => {
 		const id = Date.now().toString()
 		const newTab: ITab = {
 			id,
-			title: `Query ${tabs.length + 1}`,
+			title: t('tabs.newQueryTitle', {
+				index: tabs.length + 1,
+			}),
 			type: 'query',
 			workspaceId: connectionId,
 			connectionId,
@@ -40,11 +44,12 @@ const Tabs = () => {
 					index={index}
 				/>
 			))}
-			<div
-				className='shrink-0 h-full cursor-pointer relative min-w-12 hover:bg-primary hover:text-primary-foreground transition-colors duration-300 select-none flex items-center justify-center border-r px-4 sm:px-0'
-				onClick={handleNewQueryTab}>
-				<PlusIcon />
-			</div>
+				<div
+					data-hotkey-new-query
+					className='shrink-0 h-full cursor-pointer relative min-w-12 hover:bg-primary hover:text-primary-foreground transition-colors duration-300 select-none flex items-center justify-center border-r px-4 sm:px-0'
+					onClick={handleNewQueryTab}>
+					<PlusIcon />
+				</div>
 		</div>
 	)
 }

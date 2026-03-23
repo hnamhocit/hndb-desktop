@@ -1,6 +1,10 @@
 import { AxiosError } from 'axios'
 import { toast } from 'sonner'
 
+import type { TranslationKey } from '@/i18n/messages'
+import { translate } from '@/i18n/messages'
+import { usePreferencesStore } from '@/stores/preferences.store'
+
 const MESSAGE_MAX_LENGTH = 220
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -77,6 +81,14 @@ const extractErrorMessage = (error: unknown): string | null => {
 	return null
 }
 
+const t = (
+	key: TranslationKey,
+	params?: Record<string, string | number>,
+): string => {
+	const language = usePreferencesStore.getState().language
+	return translate(language, key, params)
+}
+
 const humanizeDatabaseError = (message: string): string => {
 	const normalized = message.toLowerCase()
 
@@ -90,7 +102,9 @@ const humanizeDatabaseError = (message: string): string => {
 		normalized.includes('os error 61') ||
 		normalized.includes('no such file or directory')
 	) {
-		return `Cannot connect to the database server. It may not be started, or the host/port/socket is incorrect. Detail: ${message}`
+		return t('errors.cannotConnectServer', {
+			detail: message,
+		})
 	}
 
 	if (
@@ -98,7 +112,9 @@ const humanizeDatabaseError = (message: string): string => {
 		normalized.includes('timeout') ||
 		normalized.includes('deadline has elapsed')
 	) {
-		return `The database server did not respond in time. Check network access, host/port, and whether the server is overloaded. Detail: ${message}`
+		return t('errors.serverTimeout', {
+			detail: message,
+		})
 	}
 
 	if (
@@ -107,14 +123,18 @@ const humanizeDatabaseError = (message: string): string => {
 		normalized.includes('access denied for user') ||
 		normalized.includes('using password: yes')
 	) {
-		return `Database authentication failed. Check the username and password. Detail: ${message}`
+		return t('errors.authenticationFailed', {
+			detail: message,
+		})
 	}
 
 	if (
 		normalized.includes('database does not exist') ||
 		normalized.includes('unknown database')
 	) {
-		return `The target database was not found. Check the database name in the connection settings. Detail: ${message}`
+		return t('errors.databaseNotFound', {
+			detail: message,
+		})
 	}
 
 	if (
@@ -122,14 +142,18 @@ const humanizeDatabaseError = (message: string): string => {
 		normalized.includes('user does not exist') ||
 		normalized.includes('unknown user')
 	) {
-		return `The database user was not found. Check the username or role. Detail: ${message}`
+		return t('errors.userNotFound', {
+			detail: message,
+		})
 	}
 
 	if (
 		normalized.includes('permission denied') ||
 		normalized.includes('not enough privileges')
 	) {
-		return `The database user does not have permission to perform this action. Detail: ${message}`
+		return t('errors.permissionDenied', {
+			detail: message,
+		})
 	}
 
 	return message

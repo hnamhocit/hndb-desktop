@@ -1,4 +1,5 @@
 import type { IConnection } from '@/interfaces'
+import type { TranslationKey } from '@/i18n/messages'
 import type {
 	DataSourceFormData,
 	DataSourceFormValues,
@@ -110,20 +111,26 @@ export const getDialogTitle = ({
 	step,
 	isEditMode,
 	selectedName,
+	t,
 }: {
 	step: 1 | 2
 	isEditMode: boolean
 	selectedName?: string
+	t: (key: TranslationKey, params?: Record<string, string | number>) => string
 }) => {
 	if (step === 1) {
-		return 'Select Data Source'
+		return t('dataSource.dialog.selectTitle')
 	}
 
 	if (isEditMode) {
-		return `Edit ${selectedName || 'Connection'}`
+		return t('dataSource.dialog.editTitle', {
+			name: selectedName || t('dataSource.dialog.defaultConnectionName'),
+		})
 	}
 
-	return `Configure ${selectedName || 'Database'}`
+	return t('dataSource.dialog.configureTitle', {
+		name: selectedName || t('dataSource.dialog.defaultDatabaseName'),
+	})
 }
 
 const normalizeConnectionString = (

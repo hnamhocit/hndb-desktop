@@ -1,31 +1,59 @@
 import { createElement } from 'react'
-import { type RouteObject } from 'react-router'
+import { Navigate, Outlet, type RouteObject } from 'react-router'
 
 import DefaultLayout from './layouts/DefaultLayout'
 import EnterPage from './pages/enter'
 import Home from './pages/home'
 import MeSettingsPage from './pages/me/settings'
+import { useUserStore } from './stores'
+
+const GuestRoute = () => {
+	const user = useUserStore((state) => state.user)
+
+	return user ?
+			createElement(Navigate, {
+				to: '/',
+				replace: true,
+			})
+		:	createElement(EnterPage)
+}
+
+const ProtectedRoute = () => {
+	const user = useUserStore((state) => state.user)
+
+	return user ?
+			createElement(Outlet)
+		:	createElement(Navigate, {
+				to: '/enter',
+				replace: true,
+			})
+}
 
 export const appRoutes: RouteObject[] = [
 	{
 		path: '/enter',
-		element: createElement(EnterPage),
+		element: createElement(GuestRoute),
 	},
 	{
-		path: '/',
-		element: createElement(DefaultLayout),
+		element: createElement(ProtectedRoute),
 		children: [
 			{
-				index: true,
-				element: createElement(Home),
-			},
-			{
-				path: 'me/settings',
-				element: createElement(MeSettingsPage),
-			},
-			{
-				path: '*',
-				element: createElement(Home),
+				path: '/',
+				element: createElement(DefaultLayout),
+				children: [
+					{
+						index: true,
+						element: createElement(Home),
+					},
+					{
+						path: 'me/settings',
+						element: createElement(MeSettingsPage),
+					},
+					{
+						path: '*',
+						element: createElement(Home),
+					},
+				],
 			},
 		],
 	},

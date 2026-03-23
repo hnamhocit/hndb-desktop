@@ -4,6 +4,7 @@ import { useState } from 'react'
 
 import DataSourceDialog from '@/components/DataSourceDialog'
 import { supportConnections } from '@/constants'
+import { useI18n } from '@/hooks'
 import { useActiveStore, useConnectionStore } from '@/stores'
 import ConnectionContextMenu from '../ConnectionContextMenu'
 
@@ -17,15 +18,29 @@ const Connections = ({
 	connectingId = null,
 }: ConnectionsProps) => {
 	const [isDialogOpen, setIsDialogOpen] = useState(false)
+	const { t } = useI18n()
 	const { connections, statuses } = useConnectionStore()
 	const { connectionId } = useActiveStore()
 
 	return (
-		<div className='shrink-0 w-20 border-r'>
+		<div
+			tabIndex={-1}
+			data-sidebar-focus-target
+			className='shrink-0 w-20 border-r outline-none'>
 			<DataSourceDialog
 				open={isDialogOpen}
 				onOpenChange={setIsDialogOpen}>
-				<div className='border-b cursor-pointer h-20 flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors duration-300'>
+				<div
+					data-sidebar-connection-item
+					tabIndex={0}
+					role='button'
+					onKeyDown={(event) => {
+						if (event.key === 'Enter' || event.key === ' ') {
+							event.preventDefault()
+							setIsDialogOpen(true)
+						}
+					}}
+					className='border-b cursor-pointer h-20 flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors duration-300 outline-none focus-visible:ring-2 focus-visible:ring-primary'>
 					<PlugIcon />
 				</div>
 			</DataSourceDialog>
@@ -43,15 +58,26 @@ const Connections = ({
 						<ConnectionContextMenu
 							ds={connection}
 							key={connection.id}>
-							<div
-								onClick={() =>
-									void onSelectConnection(connection.id)
-								}
-								className={clsx(
-									'relative flex h-20 cursor-pointer items-center justify-center border-b p-2 transition-all duration-300',
-									isConnecting && 'pointer-events-none',
-									isActive ?
-										'bg-muted/40'
+								<div
+									data-sidebar-connection-item
+									tabIndex={0}
+									onClick={() =>
+										void onSelectConnection(connection.id)
+									}
+									onKeyDown={(event) => {
+										if (
+											event.key === 'Enter' ||
+											event.key === ' '
+										) {
+											event.preventDefault()
+											void onSelectConnection(connection.id)
+										}
+									}}
+									className={clsx(
+										'relative flex h-20 cursor-pointer items-center justify-center border-b p-2 transition-all duration-300 outline-none focus-visible:ring-2 focus-visible:ring-primary',
+										isConnecting && 'pointer-events-none',
+										isActive ?
+											'bg-muted/40'
 									:	'hover:bg-muted/50',
 								)}>
 								{isActive && (
@@ -76,10 +102,10 @@ const Connections = ({
 										)}
 										title={
 											isConnecting ?
-												'Connecting...'
+												t('sidebar.connectionConnecting')
 											: isConnected ?
-												'Connection is active'
-											:	'Connection is disconnected'
+												t('sidebar.connectionActive')
+											:	t('sidebar.connectionDisconnected')
 										}
 									/>
 

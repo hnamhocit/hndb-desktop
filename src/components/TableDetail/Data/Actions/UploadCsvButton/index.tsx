@@ -1,5 +1,6 @@
 import { FileUpIcon } from 'lucide-react'
 import { useRef } from 'react'
+import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -7,12 +8,13 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { useActiveTab } from '@/hooks'
+import { useActiveTab, useI18n } from '@/hooks'
 import { ITab } from '@/interfaces'
 import { useActiveStore, useTabsStore } from '@/stores'
 import { generateInsertSqlFromCsv, getTabConnectionId } from '@/utils'
 
 const UploadCsvButton = () => {
+	const { t } = useI18n()
 	const ref = useRef<HTMLInputElement>(null)
 	const { setTabs, tabs, commitContent } = useTabsStore()
 	const { setActiveTabId } = useActiveStore()
@@ -31,7 +33,7 @@ const UploadCsvButton = () => {
 					</Button>
 				</TooltipTrigger>
 				<TooltipContent>
-					<p>Import CSV</p>
+					<p>{t('table.actions.importCsv')}</p>
 				</TooltipContent>
 			</Tooltip>
 
@@ -64,6 +66,14 @@ const UploadCsvButton = () => {
 								setTabs([...tabs, newTab])
 								setActiveTabId(id)
 								commitContent(id, sql)
+							},
+							(errorCode) => {
+								if (errorCode === 'EMPTY_CSV') {
+									toast.error(t('table.csv.emptyFile'))
+									return
+								}
+
+								toast.error(t('table.csv.parseFailed'))
 							},
 						)
 					}

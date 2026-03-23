@@ -186,6 +186,62 @@ fn build_mysql_schema_query() -> &'static str {
     "#
 }
 
+fn build_mssql_schema_query() -> &'static str {
+    r#"
+        SELECT
+            t.name AS table_name,
+            c.name AS column_name,
+            ty.name AS data_type,
+            CAST(c.is_nullable AS bit) AS is_nullable,
+            dc.definition AS column_default,
+            CAST(CASE WHEN pk.column_id IS NOT NULL THEN 1 ELSE 0 END AS bit) AS is_primary,
+            CAST(CASE WHEN fk.parent_column_id IS NOT NULL THEN 1 ELSE 0 END AS bit) AS is_foreign_key,
+            CAST(CASE WHEN uq.column_id IS NOT NULL THEN 1 ELSE 0 END AS bit) AS is_unique,
+            CAST(CASE WHEN ix.column_id IS NOT NULL THEN 1 ELSE 0 END AS bit) AS is_indexed,
+            CASE
+                WHEN fk.parent_column_id IS NOT NULL THEN CONCAT(rt.name, '.', rc.name)
+                ELSE NULL
+            END AS foreign_key_target
+        FROM sys.tables t
+        JOIN sys.columns c ON c.object_id = t.object_id
+        JOIN sys.types ty ON ty.user_type_id = c.user_type_id
+        LEFT JOIN sys.default_constraints dc ON c.default_object_id = dc.object_id
+        LEFT JOIN (
+            SELECT ic.object_id, ic.column_id
+            FROM sys.indexes i
+            JOIN sys.index_columns ic
+                ON i.object_id = ic.object_id
+                AND i.index_id = ic.index_id
+            WHERE i.is_primary_key = 1
+        ) pk ON pk.object_id = c.object_id AND pk.column_id = c.column_id
+        LEFT JOIN (
+            SELECT ic.object_id, ic.column_id
+            FROM sys.indexes i
+            JOIN sys.index_columns ic
+                ON i.object_id = ic.object_id
+                AND i.index_id = ic.index_id
+            WHERE i.is_unique = 1
+        ) uq ON uq.object_id = c.object_id AND uq.column_id = c.column_id
+        LEFT JOIN (
+            SELECT ic.object_id, ic.column_id
+            FROM sys.indexes i
+            JOIN sys.index_columns ic
+                ON i.object_id = ic.object_id
+                AND i.index_id = ic.index_id
+            GROUP BY ic.object_id, ic.column_id
+        ) ix ON ix.object_id = c.object_id AND ix.column_id = c.column_id
+        LEFT JOIN sys.foreign_key_columns fk
+            ON fk.parent_object_id = c.object_id
+            AND fk.parent_column_id = c.column_id
+        LEFT JOIN sys.tables rt ON rt.object_id = fk.referenced_object_id
+        LEFT JOIN sys.columns rc
+            ON rc.object_id = fk.referenced_object_id
+            AND rc.column_id = fk.referenced_column_id
+        WHERE t.is_ms_shipped = 0
+        ORDER BY t.name, c.column_id
+    "#
+}
+
 fn quote_sqlite_identifier(value: &str) -> String {
     format!("\"{}\"", value.replace('"', "\"\""))
 }
@@ -345,6 +401,10 @@ pub async fn get_table_schema(
         }
         "mysql" | "mariadb" => {
             let raw = client.run_sql(build_mysql_schema_query()).await?;
+            rows_to_schema(parse_json_rows(&raw)?)
+        }
+        "mssql" => {
+            let raw = client.run_sql(build_mssql_schema_query()).await?;
             rows_to_schema(parse_json_rows(&raw)?)
         }
         "sqlite" => fetch_sqlite_schema(&client, &database).await?,

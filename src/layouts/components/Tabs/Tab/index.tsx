@@ -9,7 +9,8 @@ import {
 	ContextMenuItem,
 	ContextMenuTrigger,
 } from '@/components/ui/context-menu'
-import { useActiveTab } from '@/hooks'
+import { useActiveTab, useI18n } from '@/hooks'
+import type { TranslationKey } from '@/i18n/messages'
 import { ITab } from '@/interfaces'
 import {
 	useActiveStore,
@@ -31,6 +32,7 @@ const Tab: FC<TabProps> = (props) => {
 	const { setActiveTabId, setConnectionId, setDatabase, setTable } =
 		useActiveStore()
 	const activeTab = useActiveTab()
+	const { t } = useI18n()
 
 	const handleContextMenuAction = (actionId: string) => {
 		switch (actionId) {
@@ -80,7 +82,7 @@ const Tab: FC<TabProps> = (props) => {
 					<div className='font-mono font-medium'>{title}</div>
 
 					<button
-						title='Close'
+						title={t('tabs.close')}
 						className={clsx(
 							'flex items-center justify-center rounded-md p-0.5 transition-all duration-200',
 							id === activeTab?.id ?
@@ -101,7 +103,7 @@ const Tab: FC<TabProps> = (props) => {
 					<ContextMenuItem
 						key={item.id}
 						onClick={() => handleContextMenuAction(item.id)}>
-						{item.title}
+						{t(item.key as TranslationKey)}
 					</ContextMenuItem>
 				))}
 			</ContextMenuContent>

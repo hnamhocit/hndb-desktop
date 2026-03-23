@@ -1,4 +1,5 @@
 export * from './csv'
+export * from './formatMetric'
 export * from './formatDataSize'
 export * from './generateSqlStatements'
 export * from './getLayoutedElements'

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
-import { useActiveTab, useActiveTablePath } from '@/hooks'
+import { useActiveTab, useActiveTablePath, useI18n } from '@/hooks'
 import { connectionService } from '@/services'
 import { useActiveStore, useDataEditorStore } from '@/stores'
 import { generateSqlStatements, notifyError } from '@/utils'
@@ -19,6 +19,7 @@ interface ActionsProps {
 
 const Actions = ({ refreshData, primaryColumnName }: ActionsProps) => {
 	const [isSaving, setIsSaving] = useState(false)
+	const { t } = useI18n()
 
 	const activeTab = useActiveTab()
 	const { connectionId, database } = useActiveStore()
@@ -60,9 +61,9 @@ const Actions = ({ refreshData, primaryColumnName }: ActionsProps) => {
 
 			await refreshData()
 
-			toast.success('All changes saved successfully!')
+			toast.success(t('table.toast.savedChanges'))
 		} catch (error) {
-			notifyError(error, 'Failed to save changes.')
+			notifyError(error, t('errors.failedSaveChanges'))
 		} finally {
 			setIsSaving(false)
 		}
@@ -108,7 +109,7 @@ const Actions = ({ refreshData, primaryColumnName }: ActionsProps) => {
 								variant='ghost'
 								className='text-red-500 whitespace-nowrap'>
 								<XIcon />
-								Cancel
+								{t('table.actions.cancel')}
 							</Button>
 
 							<Button
@@ -117,7 +118,7 @@ const Actions = ({ refreshData, primaryColumnName }: ActionsProps) => {
 								variant='ghost'
 								className='text-green-500 whitespace-nowrap'>
 								<CheckIcon />
-								Save
+								{t('table.actions.save')}
 							</Button>
 						</>
 					)}

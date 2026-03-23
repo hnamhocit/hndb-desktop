@@ -1,12 +1,5 @@
 'use client'
 
-import { ArrowLeftIcon } from 'lucide-react'
-import { useState } from 'react'
-import { Link } from 'react-router'
-import { toast } from 'sonner'
-
-import { useI18n } from '@/hooks'
-import { Button } from '@/components/ui/button'
 import {
 	Card,
 	CardContent,
@@ -15,32 +8,13 @@ import {
 	CardTitle,
 } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { notifyError } from '@/utils'
-import { supabaseClient } from '@/utils/supabase'
+import { useI18n } from '@/hooks'
 import LoginForm from './LoginForm'
+import Providers from './Providers'
 import RegisterForm from './RegisterForm'
 
 export default function Enter() {
-	const [disabled, setDisabled] = useState(false)
 	const { t } = useI18n()
-
-	const signInWithProvider = async (provider: 'google' | 'github') => {
-		setDisabled(true)
-
-		try {
-			const { error } = await supabaseClient.auth.signInWithOAuth({
-				provider,
-			})
-
-			if (error) {
-				toast.error(error.message, { position: 'top-center' })
-			}
-		} catch (error) {
-			notifyError(error, `${provider} login failed`)
-		} finally {
-			setDisabled(false)
-		}
-	}
 
 	return (
 		<div className='relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-100 via-sky-50 to-blue-100 p-4 dark:from-zinc-950 dark:via-slate-950 dark:to-zinc-900'>
@@ -49,19 +23,6 @@ export default function Enter() {
 
 			<Card className='relative w-full max-w-md border-white/60 bg-white/90 shadow-2xl backdrop-blur dark:border-zinc-700/60 dark:bg-zinc-900/85'>
 				<CardHeader className='space-y-2 text-center'>
-					<div className='flex justify-start'>
-						<Button
-							asChild
-							variant='ghost'
-							size='sm'
-							className='text-muted-foreground'>
-							<Link to='/'>
-								<ArrowLeftIcon />
-								{t('enter.backToHome')}
-							</Link>
-						</Button>
-					</div>
-
 					<div className='mx-auto inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-semibold text-muted-foreground'>
 						<img
 							src='/logo.png'
@@ -113,35 +74,7 @@ export default function Enter() {
 						</div>
 					</div>
 
-					<div className='grid grid-cols-2 gap-4'>
-						<Button
-							disabled={disabled}
-							variant='outline'
-							className='h-10'
-							onClick={() => signInWithProvider('google')}>
-							<img
-								src='/providers/google.svg'
-								width={16}
-								height={16}
-								alt='Google Logo'
-							/>
-							Google
-						</Button>
-
-						<Button
-							disabled={disabled}
-							variant='outline'
-							className='h-10'
-							onClick={() => signInWithProvider('github')}>
-							<img
-								src='/providers/github.png'
-								width={16}
-								height={16}
-								alt='GitHub Logo'
-							/>
-							GitHub
-						</Button>
-					</div>
+					<Providers />
 				</CardContent>
 			</Card>
 		</div>

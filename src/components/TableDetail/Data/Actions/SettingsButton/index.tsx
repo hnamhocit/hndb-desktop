@@ -1,6 +1,7 @@
 import { SettingsIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { useI18n } from '@/hooks'
 import {
 	Tooltip,
 	TooltipContent,
@@ -8,6 +9,8 @@ import {
 } from '@/components/ui/tooltip'
 
 const SettingsButton = () => {
+	const { t } = useI18n()
+
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
@@ -19,7 +22,7 @@ const SettingsButton = () => {
 			</TooltipTrigger>
 
 			<TooltipContent>
-				<p>More actions coming soon...</p>
+				<p>{t('table.actions.moreSoon')}</p>
 			</TooltipContent>
 		</Tooltip>
 	)

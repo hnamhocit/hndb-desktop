@@ -1,9 +1,10 @@
 import { CheckCircle2Icon } from 'lucide-react'
 
 import QueryTable from '@/components/QueryTable'
-import { useActiveTab } from '@/hooks'
+import { useActiveTab, useI18n } from '@/hooks'
 import { IQueryResult } from '@/interfaces'
 import { useTabsStore } from '@/stores'
+import { formatCompactCount, formatDurationMs } from '@/utils'
 import { TabId } from '..'
 import ExecutionLog from '../ExecutionLog'
 import QueryPlan from '../QueryPlan'
@@ -14,6 +15,7 @@ interface TabContentProps {
 }
 
 const TabContent = ({ currentTab, result }: TabContentProps) => {
+	const { t } = useI18n()
 	const { contentById } = useTabsStore()
 	const activeTab = useActiveTab()
 
@@ -32,21 +34,20 @@ const TabContent = ({ currentTab, result }: TabContentProps) => {
 						<div className='w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400'>
 							<CheckCircle2Icon size={32} />
 						</div>
-						<div className='text-center'>
-							<h3 className='text-lg font-semibold text-neutral-800 dark:text-neutral-200 mb-1'>
-								Query executed successfully
-							</h3>
-							<p className='text-sm'>
-								<span className='font-bold text-neutral-700 dark:text-neutral-300'>
-									{result.affectedRows || 0}
-								</span>{' '}
-								rows affected in{' '}
-								<span className='font-bold text-neutral-700 dark:text-neutral-300'>
-									{result.durationMs?.toFixed(2) || 0}
-									ms
-								</span>
-							</p>
-						</div>
+							<div className='text-center'>
+								<h3 className='text-lg font-semibold text-neutral-800 dark:text-neutral-200 mb-1'>
+									{t('query.successTitle')}
+								</h3>
+								<p className='text-sm'>
+									<span className='font-bold text-neutral-700 dark:text-neutral-300'>
+										{formatCompactCount(result.affectedRows || 0)}
+									</span>{' '}
+									{t('table.result.rowsAffectedIn')}{' '}
+									<span className='font-bold text-neutral-700 dark:text-neutral-300'>
+										{formatDurationMs(result.durationMs)}
+									</span>
+								</p>
+							</div>
 					</div>
 				)}
 

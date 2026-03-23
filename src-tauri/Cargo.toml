@@ -5,12 +5,7 @@ description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [lib]
-# The `_lib` suffix may seem redundant but it is necessary
-# to make the lib name unique and wouldn't conflict with the bin name.
-# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
 name = "hndb_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
@@ -19,35 +14,38 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+tauri-plugin-deep-link = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-store = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
-
 sqlx = { version = "0.8", features = [
-    "runtime-tokio",
-    "postgres",
-    "mysql",      # covers cả mariadb
-    "sqlite",
-    "chrono",
-    "json",
+  "runtime-tokio",
+  "postgres",
+  "mysql",
+  "sqlite",
+  "chrono",
+  "json",
 ] }
 tokio = { version = "1", features = ["full"] }
 tiberius = "0.12"
 tokio-util = { version = "0.7", features = ["compat"] }
+url = "2"
 tauri-plugin-stronghold = "2"
 iota_stronghold = "2.1.0"
 rand = "0.10.0"
-# keyring v3 requires explicit backend features; otherwise it falls back to the
-# in-memory mock store and credentials disappear every app restart.
 keyring = { version = "3.6.3", features = [
-    "apple-native",
-    "windows-native",
-    "linux-native-sync-persistent",
-    "crypto-rust",
+  "apple-native",
+  "windows-native",
+  "linux-native-sync-persistent",
+  "crypto-rust",
 ] }
+
+# single-instance chỉ cần trên desktop, không dùng trên mobile
+[target."cfg(any(target_os = \"macos\", windows, target_os = \"linux\"))".dependencies]
+tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 
 [profile.dev.package.scrypt]
 opt-level = 3

@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 
 import { Input } from '@/components/ui/input'
-import { useActiveTab } from '@/hooks'
+import { useActiveTab, useI18n } from '@/hooks'
 import {
 	useActiveStore,
 	useConnectionStore,
@@ -15,6 +15,7 @@ import {
 const DataSourceSearch = () => {
 	const navigate = useNavigate()
 	const activeTab = useActiveTab()
+	const { t } = useI18n()
 
 	const { updateTab } = useTabsStore()
 	const { connections } = useConnectionStore()
@@ -66,7 +67,8 @@ const DataSourceSearch = () => {
 			/>
 			<Input
 				type='text'
-				placeholder='Search data sources...'
+				data-hotkey-quick-search
+				placeholder={t('header.searchDataSources')}
 				value={query}
 				onFocus={() => setIsOpen(true)}
 				onBlur={() => setTimeout(() => setIsOpen(false), 120)}
@@ -105,7 +107,7 @@ const DataSourceSearch = () => {
 							})}
 						</ul>
 					:	<div className='px-3 py-4 text-sm text-muted-foreground'>
-							No data source found.
+							{t('header.noDataSourceFound')}
 						</div>}
 				</div>
 			)}

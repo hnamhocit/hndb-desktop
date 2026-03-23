@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import clsx from 'clsx'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -16,25 +16,16 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog'
+import { useI18n } from '@/hooks'
 import { Input } from '@/components/ui/input'
 import { id } from '@/helpers'
 import { connectionService } from '@/services'
 import { useContextMenuStore, useMetadataStore } from '@/stores'
 import { notifyError, renderToken, resolveQueryByDialect } from '@/utils'
 
-const formSchema = z.object({
-	name: z
-		.string()
-		.trim()
-		.min(1, 'Database name is required.')
-		.max(64, 'Database name is too long.')
-		.regex(
-			/^[A-Za-z_][A-Za-z0-9_$]*$/,
-			'Only letters, numbers, underscore, and $ are allowed. Name must not start with a number.',
-		),
-})
-
-type FormValues = z.infer<typeof formSchema>
+interface FormValues {
+	name: string
+}
 
 interface RenameDatabaseDialogProps {
 	dataSourceId: string
@@ -45,10 +36,26 @@ const RenameDialog = ({
 	dataSourceId,
 	database,
 }: RenameDatabaseDialogProps) => {
+	const { t } = useI18n()
 	const { target, actionType, isSubmitting, setIsSubmitting, closeAction } =
 		useContextMenuStore()
 
 	const { databases, setDatabases, schema, setSchema } = useMetadataStore()
+	const formSchema = useMemo(
+		() =>
+			z.object({
+				name: z
+					.string()
+					.trim()
+					.min(1, t('connection.error.databaseNameRequiredStrict'))
+					.max(64, t('connection.error.databaseNameTooLong'))
+					.regex(
+						/^[A-Za-z_][A-Za-z0-9_$]*$/,
+						t('connection.error.databaseNameFormatStrict'),
+					),
+			}),
+		[t],
+	)
 
 	const isOpen =
 		actionType === 'rename' &&
@@ -100,10 +107,9 @@ const RenameDialog = ({
 			)
 
 			if (!query) {
-				toast.error(
-					'Renaming database is not supported for this database type.',
-					{ position: 'top-center' },
-				)
+				toast.error(t('connection.error.renameDatabaseUnsupported'), {
+					position: 'top-center',
+				})
 				return
 			}
 
@@ -132,7 +138,7 @@ const RenameDialog = ({
 
 			closeAction()
 		} catch (error) {
-			notifyError(error, 'Failed to rename database.')
+			notifyError(error, t('errors.failedRenameDatabase'))
 		} finally {
 			setIsSubmitting(false)
 		}
@@ -144,9 +150,11 @@ const RenameDialog = ({
 			onOpenChange={(open) => !open && closeAction()}>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>Rename database</DialogTitle>
+					<DialogTitle>{t('connection.dialog.renameDatabase.title')}</DialogTitle>
 					<DialogDescription>
-						Enter a new name for <strong>{database}</strong>.
+						{t('connection.dialog.renameDatabase.description', {
+							name: database,
+						})}
 					</DialogDescription>
 				</DialogHeader>
 
@@ -157,13 +165,13 @@ const RenameDialog = ({
 						<label
 							htmlFor='database-name'
 							className='text-sm font-medium'>
-							Database name
+							{t('connection.dialog.renameDatabase.label')}
 						</label>
 
 						<Input
 							id='database-name'
 							autoFocus
-							placeholder='Enter database name'
+							placeholder={t('connection.dialog.renameDatabase.placeholder')}
 							{...register('name')}
 							className={clsx(
 								errors.name &&
@@ -172,7 +180,7 @@ const RenameDialog = ({
 						/>
 
 						<p className='text-xs text-muted-foreground'>
-							Use a valid SQL identifier.
+							{t('connection.dialog.renameDatabase.helper')}
 						</p>
 
 						{errors.name && (
@@ -188,13 +196,13 @@ const RenameDialog = ({
 							variant='outline'
 							onClick={closeAction}
 							disabled={isSubmitting}>
-							Cancel
+							{t('common.cancel')}
 						</Button>
 
 						<Button
 							type='submit'
 							disabled={isSubmitting}>
-							Save
+							{t('common.save')}
 						</Button>
 					</DialogFooter>
 				</form>

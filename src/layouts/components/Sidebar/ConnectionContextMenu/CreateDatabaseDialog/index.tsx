@@ -1,6 +1,7 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -15,7 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { id } from '@/helpers'
-import { useDatabases } from '@/hooks'
+import { useDatabases, useI18n } from '@/hooks'
 import { connectionService } from '@/services'
 import { useContextMenuStore } from '@/stores'
 import { notifyError, renderToken, resolveQueryByDialect } from '@/utils'
@@ -24,25 +25,31 @@ interface CreateDatabaseDialogProps {
 	dataSourceId: string
 }
 
-const formSchema = z.object({
-	databaseName: z
-		.string()
-		.min(1, 'Database name is required')
-		.regex(
-			/^[a-zA-Z0-9_.-]+$/,
-			'Only letters, numbers, dashes, underscores, and dots are allowed',
-		),
-})
-
-type FormData = z.infer<typeof formSchema>
+interface FormData {
+	databaseName: string
+}
 
 const CreateDatabaseDialog = ({ dataSourceId }: CreateDatabaseDialogProps) => {
+	const { t } = useI18n()
 	const { actionType, target, closeAction } = useContextMenuStore()
 	const isOpen =
 		dataSourceId === target?.dataSourceId &&
 		actionType === 'create-database' &&
 		target.database === null
 	const { reload } = useDatabases(dataSourceId, { autoFetch: false })
+	const formSchema = useMemo(
+		() =>
+			z.object({
+				databaseName: z
+					.string()
+					.min(1, t('connection.error.requireDatabaseName'))
+					.regex(
+						/^[a-zA-Z0-9_.-]+$/,
+						t('connection.error.allowedDatabaseNameChars'),
+					),
+			}),
+		[t],
+	)
 
 	const {
 		register,
@@ -58,12 +65,9 @@ const CreateDatabaseDialog = ({ dataSourceId }: CreateDatabaseDialogProps) => {
 			/^[A-Za-z0-9_]+$/.test(name)
 
 		if (!isValidDatabaseName(data.databaseName)) {
-			toast.error(
-				'Invalid database name. Only letters, numbers, and underscores are allowed.',
-				{
-					position: 'top-center',
-				},
-			)
+			toast.error(t('connection.error.nameInvalid'), {
+				position: 'top-center',
+			})
 			return
 		}
 
@@ -86,20 +90,18 @@ const CreateDatabaseDialog = ({ dataSourceId }: CreateDatabaseDialogProps) => {
 			)
 
 			if (!sql) {
-				toast.error(
-					'Creating databases is not supported for this data source type.',
-				)
+				toast.error(t('connection.error.createDatabaseUnsupported'))
 				return
 			}
 
 			await connectionService.runQuery(dataSourceId, null, sql, true)
 
-			toast.success('Created successfully')
+			toast.success(t('connection.toast.created'))
 
 			closeAction()
 			reload()
 		} catch (error) {
-			notifyError(error, 'Failed to create database.')
+			notifyError(error, t('errors.failedCreateDatabase'))
 		}
 	}
 
@@ -109,14 +111,14 @@ const CreateDatabaseDialog = ({ dataSourceId }: CreateDatabaseDialogProps) => {
 			onOpenChange={closeAction}>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>Create Database</DialogTitle>
+					<DialogTitle>{t('connection.dialog.createDatabase.title')}</DialogTitle>
 				</DialogHeader>
 
 				<form onSubmit={handleSubmit(onSubmit)}>
 					<div className='py-4'>
 						<Input
 							{...register('databaseName')}
-							placeholder='Enter new database name'
+							placeholder={t('connection.dialog.createDatabase.placeholder')}
 							autoFocus
 						/>
 						{errors.databaseName && (
@@ -132,13 +134,15 @@ const CreateDatabaseDialog = ({ dataSourceId }: CreateDatabaseDialogProps) => {
 							variant='outline'
 							onClick={closeAction}
 							disabled={isSubmitting}>
-							Cancel
+							{t('common.cancel')}
 						</Button>
 
 						<Button
 							type='submit'
 							disabled={isSubmitting}>
-							{isSubmitting ? 'Creating...' : 'Create'}
+							{isSubmitting ?
+								t('connection.dialog.createDatabase.creating')
+							:	t('common.create')}
 						</Button>
 					</DialogFooter>
 				</form>

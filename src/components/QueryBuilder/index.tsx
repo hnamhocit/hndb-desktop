@@ -11,36 +11,57 @@ import {
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
-import { useActiveTab } from '@/hooks'
+import { useActiveTab, useI18n } from '@/hooks'
 import { IQueryResult } from '@/interfaces'
 import { connectionService } from '@/services'
 import { useConnectionStore, useTabsStore } from '@/stores'
-import { exportToCsv, getTabConnectionId, notifyError } from '@/utils'
-import { AxiosError } from 'axios'
+import {
+	exportToCsv,
+	formatCompactCount,
+	formatDurationMs,
+	getTabConnectionId,
+	notifyError,
+} from '@/utils'
 import { Button } from '../ui/button'
 import ConfirmQueryDialog from './ConfirmQueryDialog'
 import SqlContextSelector from './SqlContextSelector'
 import SqlEditor from './SqlEditor'
 import TabContent from './TabContent'
 
-const tabs = [
-	{
-		id: 'results',
-		title: 'Results',
-	},
-	{
-		id: 'execution-log',
-		title: 'Execution Log',
-	},
-	{
-		id: 'query-plan',
-		title: 'Query Plan',
-	},
-] as const
+const tabIds = ['results', 'execution-log', 'query-plan'] as const
 
-export type TabId = (typeof tabs)[number]['id']
+export type TabId = (typeof tabIds)[number]
+
+const DANGEROUS_QUERY_MARKER = 'DANGEROUS_QUERY'
+
+const getErrorText = (error: unknown): string => {
+	if (typeof error === 'string') {
+		return error
+	}
+
+	if (error instanceof Error) {
+		return error.message
+	}
+
+	if (typeof error === 'object' && error !== null) {
+		const value = error as Record<string, unknown>
+
+		for (const key of ['error', 'message', 'details', 'cause']) {
+			const candidate = value[key]
+			if (typeof candidate === 'string' && candidate.trim()) {
+				return candidate
+			}
+		}
+	}
+
+	return ''
+}
+
+const isDangerousQueryError = (error: unknown) =>
+	getErrorText(error).toUpperCase().includes(DANGEROUS_QUERY_MARKER)
 
 const QueryBuilder = () => {
+	const { t } = useI18n()
 	const [currentTab, setCurrentTab] = useState<TabId>('results')
 	const [isLoading, setIsLoading] = useState(false)
 	const [result, setResult] = useState<IQueryResult | null>(null)
@@ -53,6 +74,20 @@ const QueryBuilder = () => {
 		connectionId ? state.statuses[connectionId] : undefined,
 	)
 	const isDisconnected = connectionStatus === false
+	const tabs = [
+		{
+			id: 'results' as const,
+			title: t('query.tab.results'),
+		},
+		{
+			id: 'execution-log' as const,
+			title: t('query.tab.executionLog'),
+		},
+		{
+			id: 'query-plan' as const,
+			title: t('query.tab.queryPlan'),
+		},
+	]
 
 	const toggleIsOpen = () => setIsOpen((prev) => !prev)
 
@@ -69,14 +104,14 @@ const QueryBuilder = () => {
 		}
 
 		if (!connectionId) {
-			toast.error('No data source selected', {
+			toast.error(t('query.noDataSourceSelected'), {
 				position: 'top-center',
 			})
 			return
 		}
 
 		if (isDisconnected) {
-			toast.error('Connection is disconnected. Please connect again.', {
+			toast.error(t('query.connectionDisconnected'), {
 				position: 'top-center',
 			})
 			return
@@ -99,21 +134,12 @@ const QueryBuilder = () => {
 				setCurrentTab('execution-log')
 			}
 		} catch (error) {
-			if (error instanceof AxiosError) {
-				const errorMsg = error.response?.data?.message || ''
-				const errorCode = error.response?.data?.error || ''
-
-				if (
-					error.response?.status === 403 &&
-					(errorMsg.includes('DANGEROUS') ||
-						errorCode.includes('DANGEROUS'))
-				) {
-					setIsOpen(true)
-					return
-				}
+			if (!forced && isDangerousQueryError(error)) {
+				setIsOpen(true)
+				return
 			}
 
-			notifyError(error, 'Failed to run query')
+				notifyError(error, t('errors.failedRunQuery'))
 		} finally {
 			setIsLoading(false)
 		}
@@ -125,11 +151,12 @@ const QueryBuilder = () => {
 				<div className='overflow-x-auto'>
 					<div className='flex w-max min-w-full items-center gap-2 sm:gap-4'>
 						<Button
-							onClick={() => handleRunQuery()}
-							disabled={isLoading || isDisconnected}
-							size='sm'>
+								data-hotkey-run-query
+								onClick={() => handleRunQuery()}
+								disabled={isLoading || isDisconnected}
+								size='sm'>
 							<PlayIcon />
-							Execute
+							{t('query.execute')}
 						</Button>
 
 						<div className='w-px h-5 sm:h-6 bg-neutral-300 dark:bg-neutral-700' />
@@ -184,25 +211,30 @@ const QueryBuilder = () => {
 							))}
 						</div>
 
-						{/* Stats chỉ hiện ở tab Results */}
-						{currentTab === 'results' && (
-							<div className='flex items-center gap-3 sm:gap-4 overflow-x-auto pb-2 sm:pb-0 text-neutral-700 dark:text-neutral-400 font-mono font-medium text-xs sm:text-sm whitespace-nowrap'>
-								<div className='flex items-center gap-1.5 sm:gap-2 shrink-0'>
-									<TimerIcon size={16} />
-									<div>
-										{result.durationMs?.toFixed(2) || 0}ms
+							{/* Stats chỉ hiện ở tab Results */}
+							{currentTab === 'results' && (
+								<div className='flex items-center gap-3 sm:gap-4 overflow-x-auto pb-2 sm:pb-0 text-neutral-700 dark:text-neutral-400 font-mono font-medium text-xs sm:text-sm whitespace-nowrap'>
+									<div className='flex items-center gap-1.5 sm:gap-2 shrink-0'>
+										<TimerIcon size={16} />
+										<div>{formatDurationMs(result.durationMs)}</div>
 									</div>
-								</div>
 
-								<div className='flex items-center gap-1.5 sm:gap-2 shrink-0'>
-									<DatabaseIcon size={16} />
-									<div>
-										{result.rows.length ||
-											result.affectedRows ||
-											0}{' '}
-										rows
+									<div className='flex items-center gap-1.5 sm:gap-2 shrink-0'>
+										<DatabaseIcon size={16} />
+										<div>
+											{formatCompactCount(
+												result.rows.length ||
+													result.affectedRows ||
+													0,
+											)} {t('table.result.rows')}
+										</div>
 									</div>
-								</div>
+
+								{result.isLimited && (
+									<div className='shrink-0 rounded border border-amber-300/80 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:border-amber-500/40 dark:bg-amber-900/30 dark:text-amber-300 sm:text-xs'>
+										{t('query.limitedResultSet')}
+									</div>
+								)}
 
 								{result?.rows.length > 0 && (
 									<>
@@ -223,7 +255,7 @@ const QueryBuilder = () => {
 												)
 											}}>
 											<ArrowDownToLineIcon size={16} />
-											<div>CSV</div>
+											<div>{t('query.exportCsv')}</div>
 										</div>
 									</>
 								)}

@@ -16,6 +16,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { useI18n } from '@/hooks'
 
 interface DeleteButtonProps {
 	keysLength: number
@@ -25,6 +26,7 @@ interface DeleteButtonProps {
 
 const DeleteButton = ({ onClick, disabled, keysLength }: DeleteButtonProps) => {
 	const [isOpen, setIsOpen] = useState(false)
+	const { t } = useI18n()
 
 	const handleConfirm = async (e: React.MouseEvent) => {
 		// Ngăn Dialog đóng lập tức nếu bạn muốn xử lý async xong mới đóng
@@ -49,7 +51,11 @@ const DeleteButton = ({ onClick, disabled, keysLength }: DeleteButtonProps) => {
 					</Button>
 				</TooltipTrigger>
 				<TooltipContent>
-					<p>Delete {keysLength} selected rows</p>
+					<p>
+						{t('table.delete.tooltip', {
+							count: keysLength,
+						})}
+					</p>
 				</TooltipContent>
 			</Tooltip>
 
@@ -59,20 +65,18 @@ const DeleteButton = ({ onClick, disabled, keysLength }: DeleteButtonProps) => {
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>
-							Are you sure you want to delete?
+							{t('table.delete.dialog.title')}
 						</AlertDialogTitle>
 						<AlertDialogDescription>
-							This action cannot be undone. There will be{' '}
-							<strong className='text-foreground'>
-								{keysLength} row(s)
-							</strong>{' '}
-							deleted and permanently removed from the Database.
+							{t('table.delete.dialog.description', {
+								count: keysLength,
+							})}
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 
 					<AlertDialogFooter>
 						<AlertDialogCancel disabled={disabled}>
-							Cancel
+							{t('common.cancel')}
 						</AlertDialogCancel>
 
 						{/* Dùng Button thường thay vì AlertDialogAction
@@ -82,7 +86,9 @@ const DeleteButton = ({ onClick, disabled, keysLength }: DeleteButtonProps) => {
 							onClick={handleConfirm}
 							disabled={disabled}
 							className='bg-red-600 hover:bg-red-700 text-white'>
-							{disabled ? 'Deleting...' : 'Confirm'}
+							{disabled ?
+								t('table.delete.dialog.deleting')
+							:	t('common.confirm')}
 						</Button>
 					</AlertDialogFooter>
 				</AlertDialogContent>

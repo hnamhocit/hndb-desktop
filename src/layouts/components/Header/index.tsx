@@ -1,7 +1,6 @@
 'use client'
 
 import {
-	LogInIcon,
 	LogOutIcon,
 	MoonIcon,
 	PanelLeftIcon,
@@ -14,7 +13,6 @@ import { Link } from 'react-router'
 import { toast } from 'sonner'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -124,7 +122,7 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 								HNDB
 							</span>
 							<div className='text-xs font-medium text-yellow-500'>
-								Enterprise edition
+								Community edition
 							</div>
 						</div>
 					</Link>
@@ -164,77 +162,65 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 					</button>
 				</motion.div>
 
-				{/* Divider nhỏ phân cách tool và avatar */}
-				<div className='h-4 w-px bg-border mx-1 hidden sm:block'></div>
-
 				{user ?
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<motion.button
-								whileHover={{ scale: 1.05 }}
-								className='ml-1 outline-none rounded-full ring-offset-background focus-visible:ring-2 focus-visible:ring-ring'>
-								<Avatar className='h-6 w-6 border border-border/50 shadow-sm'>
-									<AvatarImage
-										src={
-											user.photo_url ||
-											'/resources/default-user.jpg'
-										}
-									/>
-									<AvatarFallback className='text-[10px] font-semibold bg-primary/10 text-primary'>
-										{user.name
-											?.substring(0, 2)
-											.toUpperCase() || 'U'}
-									</AvatarFallback>
-								</Avatar>
-							</motion.button>
-						</DropdownMenuTrigger>
+					<>
+						{/* Divider nhỏ phân cách tool và avatar */}
+						<div className='h-4 w-px bg-border mx-1 hidden sm:block'></div>
 
-						<DropdownMenuContent
-							align='end'
-							className='w-56'>
-							<DropdownMenuLabel className='max-w-60 truncate font-mono text-xs'>
-								{user.name || t('common.user')}
-							</DropdownMenuLabel>
-							<DropdownMenuSeparator />
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<motion.button
+									whileHover={{ scale: 1.05 }}
+									className='ml-1 outline-none rounded-full ring-offset-background focus-visible:ring-2 focus-visible:ring-ring'>
+									<Avatar className='h-6 w-6 border border-border/50 shadow-sm'>
+										<AvatarImage
+											src={
+												user.photo_url ||
+												'/resources/default-user.jpg'
+											}
+										/>
+										<AvatarFallback className='text-[10px] font-semibold bg-primary/10 text-primary'>
+											{user.name
+												?.substring(0, 2)
+												.toUpperCase() || 'U'}
+										</AvatarFallback>
+									</Avatar>
+								</motion.button>
+							</DropdownMenuTrigger>
 
-							<DropdownMenuItem asChild>
-								<Link
-									to='/me/settings'
+							<DropdownMenuContent
+								align='end'
+								className='w-56'>
+								<DropdownMenuLabel className='max-w-60 truncate font-mono text-xs'>
+									{user.name || t('common.user')}
+								</DropdownMenuLabel>
+								<DropdownMenuSeparator />
+
+								<DropdownMenuItem asChild>
+									<Link
+										to='/me/settings'
+										className='text-xs cursor-pointer'>
+										<SettingsIcon className='w-4 h-4 mr-2 text-muted-foreground' />
+										{t('common.settings')}
+									</Link>
+								</DropdownMenuItem>
+
+								<DropdownMenuSeparator />
+
+								<DropdownMenuItem
+									variant='destructive'
+									disabled={isLoggingOut}
+									onSelect={handleLogout}
 									className='text-xs cursor-pointer'>
-									<SettingsIcon className='w-4 h-4 mr-2 text-muted-foreground' />
-									{t('common.settings')}
-								</Link>
-							</DropdownMenuItem>
-
-							<DropdownMenuSeparator />
-
-							<DropdownMenuItem
-								variant='destructive'
-								disabled={isLoggingOut}
-								onSelect={handleLogout}
-								className='text-xs cursor-pointer'>
-								<LogOutIcon className='w-4 h-4 mr-2' />
-								{isLoggingOut ?
-									t('common.loggingOut')
-								:	t('common.logout')}
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				:	<motion.div
-						whileTap={{ scale: 0.95 }}
-						className='ml-1'>
-						<Button
-							asChild
-							variant='ghost'
-							size='sm'
-							className='h-7 px-3 text-xs font-semibold'>
-							<Link to='/enter'>
-								<LogInIcon className='w-3 h-3 mr-1.5' />
-								{t('common.login')}
-							</Link>
-						</Button>
-					</motion.div>
-				}
+									<LogOutIcon className='w-4 h-4 mr-2' />
+									{isLoggingOut ?
+										t('common.loggingOut')
+									:	t('common.logout')}
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</>
+				:	null}
 			</div>
 		</motion.header>
 	)

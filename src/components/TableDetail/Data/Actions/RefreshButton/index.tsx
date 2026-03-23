@@ -1,6 +1,7 @@
 import { RotateCcwIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { useI18n } from '@/hooks'
 import {
 	Tooltip,
 	TooltipContent,
@@ -12,6 +13,8 @@ interface RefreshButtonProps {
 }
 
 const RefreshButton = ({ onClick }: RefreshButtonProps) => {
+	const { t } = useI18n()
+
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
@@ -23,7 +26,7 @@ const RefreshButton = ({ onClick }: RefreshButtonProps) => {
 				</Button>
 			</TooltipTrigger>
 			<TooltipContent>
-				<p>Refresh data</p>
+				<p>{t('table.actions.refreshData')}</p>
 			</TooltipContent>
 		</Tooltip>
 	)

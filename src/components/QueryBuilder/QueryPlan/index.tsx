@@ -1,8 +1,7 @@
 import { ActivityIcon, AlertCircleIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { useActiveTab } from '@/hooks'
-import { IQueryResult } from '@/interfaces'
+import { useActiveTab, useI18n } from '@/hooks'
 import { connectionService } from '@/services'
 import { getTabConnectionId, notifyError } from '@/utils'
 import JsonViewer from './JsonViewer'
@@ -12,7 +11,8 @@ interface QueryPlanProps {
 }
 
 const QueryPlan = ({ query }: QueryPlanProps) => {
-	const [planData, setPlanData] = useState<IQueryResult | null>(null)
+	const { t } = useI18n()
+	const [planData, setPlanData] = useState<unknown | null>(null)
 	const [isLoading, setIsLoading] = useState(false)
 	const activeTab = useActiveTab()
 	const connectionId = getTabConnectionId(activeTab)
@@ -31,12 +31,12 @@ const QueryPlan = ({ query }: QueryPlanProps) => {
 				const { data } = await connectionService.queryPlan(
 					connectionId,
 					query,
-					activeTab.database || '',
+					activeTab.database,
 				)
 
 				setPlanData(data.data)
 			} catch (error) {
-				notifyError(error, 'Failed to fetch query plan.')
+				notifyError(error, t('errors.failedFetchQueryPlan'))
 			} finally {
 				setIsLoading(false)
 			}
@@ -50,7 +50,7 @@ const QueryPlan = ({ query }: QueryPlanProps) => {
 					size={18}
 					className='animate-spin'
 				/>
-				<span>Loading Query Plan...</span>
+				<span>{t('query.plan.loading')}</span>
 			</div>
 		)
 	}
@@ -59,7 +59,7 @@ const QueryPlan = ({ query }: QueryPlanProps) => {
 		<div className='w-full h-full overflow-auto bg-white dark:bg-[#090b10] p-4'>
 			<div className='flex items-center gap-2 mb-4 text-primary font-bold'>
 				<ActivityIcon size={18} />
-				<span>Execution Plan</span>
+				<span>{t('query.plan.title')}</span>
 			</div>
 
 			{!planData ?
@@ -70,12 +70,10 @@ const QueryPlan = ({ query }: QueryPlanProps) => {
 					/>
 					<div>
 						<p className='font-bold mb-1'>
-							No Query Plan Available
+							{t('query.plan.noPlan')}
 						</p>
 						<p className='text-xs'>
-							Query Plan is only automatically generated for{' '}
-							<strong>SELECT</strong> statements to ensure
-							database safety.
+							{t('query.plan.noPlanDescription')}
 						</p>
 					</div>
 				</div>

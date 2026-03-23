@@ -1,28 +1,40 @@
 import z from 'zod'
 
-const passwordSchema = z
-	.string()
-	.regex(
+import type { TranslationKey } from '@/i18n/messages'
+import { translate } from '@/i18n/messages'
+
+type TranslateFn = (
+	key: TranslationKey,
+	params?: Record<string, string | number>,
+) => string
+
+const defaultTranslate: TranslateFn = (key, params) =>
+	translate('en', key, params)
+
+const createPasswordSchema = (t: TranslateFn) =>
+	z.string().regex(
 		/^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/,
-		'At least 8 characters, including uppercase, lowercase, number, and special character.',
+		t('auth.error.passwordRule'),
 	)
 
-const loginSchema = z.object({
-	email: z.email({ message: 'Invalid email address.' }),
-	password: passwordSchema,
-})
+export const createLoginSchema = (t: TranslateFn = defaultTranslate) =>
+	z.object({
+		email: z.email({ message: t('auth.error.invalidEmail') }),
+		password: createPasswordSchema(t),
+	})
+
+export const createRegisterSchema = (t: TranslateFn = defaultTranslate) =>
+	z.object({
+		name: z
+			.string()
+			.min(2, { message: t('auth.error.nameMin') })
+			.max(35, { message: t('auth.error.nameMax') }),
+		email: z.email({ message: t('auth.error.invalidEmail') }),
+		password: createPasswordSchema(t),
+	})
+
+export const loginSchema = createLoginSchema()
+export const registerSchema = createRegisterSchema()
 
 export type LoginSchema = z.infer<typeof loginSchema>
-
-const registerSchema = z.object({
-	name: z
-		.string()
-		.min(2, { message: 'Name must be at least 2 characters long.' })
-		.max(35, { message: 'Name must be at most 35 characters long.' }),
-	email: z.email({ message: 'Invalid email address.' }),
-	password: passwordSchema,
-})
-
 export type RegisterSchema = z.infer<typeof registerSchema>
-
-export { loginSchema, registerSchema }

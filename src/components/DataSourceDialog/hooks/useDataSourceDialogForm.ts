@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { invoke } from '@tauri-apps/api/core'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
 	type SubmitHandler,
 	useForm,
@@ -10,11 +10,12 @@ import {
 import { toast } from 'sonner'
 
 import { supportConnections } from '@/constants'
+import { useI18n } from '@/hooks'
 import {
 	type ConnectionFormData,
 	type ConnectionFormValues,
 	type ConnectionType,
-	connectionSchema,
+	createConnectionSchema,
 } from '@/schemas'
 import { connectionService } from '@/services'
 import {
@@ -82,6 +83,7 @@ const useDataSourceDialogForm = ({
 	isDialogOpen,
 	setDialogOpen,
 }: UseDataSourceDialogFormParams) => {
+	const { t } = useI18n()
 	const [step, setStep] = useState<1 | 2>(1)
 	const [activeTab, setActiveTab] = useState<'general' | 'advanced'>(
 		'general',
@@ -101,6 +103,7 @@ const useDataSourceDialogForm = ({
 	const autoProbeConnectionIdRef = useRef<string | null>(null)
 	const probeCycleRef = useRef(0)
 	const isResettingFormRef = useRef(false)
+	const connectionSchema = useMemo(() => createConnectionSchema(t), [t])
 
 	const form = useForm<ConnectionFormValues, unknown, ConnectionFormData>({
 		resolver: zodResolver(connectionSchema),
@@ -185,7 +188,7 @@ const useDataSourceDialogForm = ({
 						toast.error(
 							formatErrorMessage(
 								probeResult.error,
-								'Connection failed. Please check your config.',
+								t('errors.connectionFailedCheckConfig'),
 							),
 							{
 								position: 'top-center',
@@ -202,7 +205,7 @@ const useDataSourceDialogForm = ({
 				setActiveTab('advanced')
 
 				if (options?.showSuccessToast) {
-					toast.success('Connection successful!', {
+					toast.success(t('dataSource.toast.connectionSuccess'), {
 						position: 'top-center',
 					})
 				}
@@ -217,7 +220,7 @@ const useDataSourceDialogForm = ({
 				setServerVersion('')
 
 				if (options?.showErrorToast !== false) {
-					notifyError(error, 'Connection failed. Please check your config.')
+					notifyError(error, t('errors.connectionFailedCheckConfig'))
 				}
 
 				return false
@@ -227,7 +230,7 @@ const useDataSourceDialogForm = ({
 				}
 			}
 		},
-		[],
+		[t],
 	)
 
 	useEffect(() => {
@@ -433,7 +436,7 @@ const useDataSourceDialogForm = ({
 				showSuccessToast: true,
 			})
 		} catch (error) {
-			notifyError(error, 'Connection failed. Please check your config.')
+			notifyError(error, t('errors.connectionFailedCheckConfig'))
 		} finally {
 			setIsTesting(false)
 		}
@@ -464,13 +467,13 @@ const useDataSourceDialogForm = ({
 				return
 			}
 
-			toast.success('Setting overrides validated successfully!', {
-				position: 'top-center',
-			})
+				toast.success(t('dataSource.toast.settingOverridesValidated'), {
+					position: 'top-center',
+				})
 		} catch (error) {
 			notifyError(
 				error,
-				'Failed to validate setting overrides.',
+				t('errors.failedValidateSettingOverrides'),
 			)
 		} finally {
 			setIsValidatingOverrides(false)
@@ -513,8 +516,8 @@ const useDataSourceDialogForm = ({
 		) {
 			toast.error(
 				isEditMode ?
-					'Test connection and validate settings before saving.'
-				:	'Validate setting overrides before connecting.',
+					t('dataSource.toast.requireValidateBeforeSaving')
+				:	t('dataSource.toast.requireValidateBeforeConnecting'),
 				{ position: 'top-center' },
 			)
 			return
@@ -561,7 +564,7 @@ const useDataSourceDialogForm = ({
 					}),
 				)
 
-				toast.success('Data source updated successfully!', {
+				toast.success(t('dataSource.toast.updatedSuccess'), {
 					position: 'top-center',
 				})
 			} else {
@@ -599,7 +602,7 @@ const useDataSourceDialogForm = ({
 					})
 				}
 
-				toast.success('Connection saved successfully!', {
+				toast.success(t('dataSource.toast.savedSuccess'), {
 					position: 'top-center',
 				})
 			}
@@ -610,8 +613,8 @@ const useDataSourceDialogForm = ({
 			notifyError(
 				error,
 				isEditMode ?
-					'Failed to update data source.'
-				:	'Failed to add data source.',
+					t('errors.failedUpdateDataSource')
+				:	t('errors.failedAddDataSource'),
 			)
 		}
 	}

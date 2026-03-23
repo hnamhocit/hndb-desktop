@@ -3,7 +3,7 @@
 
 import { useMemo } from 'react'
 
-import { useActiveTab, useDatabases } from '@/hooks'
+import { useActiveTab, useDatabases, useI18n } from '@/hooks'
 import {
 	useActiveStore,
 	useConnectionStore,
@@ -18,6 +18,7 @@ type Option = {
 }
 
 export default function SqlContextSelector() {
+	const { t } = useI18n()
 	const { connections } = useConnectionStore()
 	const { updateTab } = useTabsStore()
 	const { setConnectionId, setDatabase, setTable } = useActiveStore()
@@ -83,7 +84,7 @@ export default function SqlContextSelector() {
 					activeTab.workspaceId ??
 					activeTab.dataSourceId
 				}
-				placeholder='{data_sources}'
+				placeholder={t('query.context.dataSources')}
 				options={dataSourceOptions}
 				onSelect={handleSelectDataSource}
 			/>
@@ -95,11 +96,13 @@ export default function SqlContextSelector() {
 					<SelectChip
 						value={activeTab.database}
 						placeholder={
-							isDatabasesLoading ? '{loading...}' : '{database}'
+							isDatabasesLoading ?
+								t('query.context.loading')
+							:	t('query.context.database')
 						}
 						options={databaseOptions}
 						onSelect={handleSelectDatabase}
-						nullableLabel='Unspecified'
+						nullableLabel={t('query.context.unspecified')}
 						disabled={isDatabasesLoading}
 					/>
 				</>

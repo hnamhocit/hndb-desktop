@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label'
 import { PasswordInput } from '@/components/ui/password-input'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { TabsContent } from '@/components/ui/tabs'
+import { useI18n } from '@/hooks'
 import type {
 	DataSourceFormData,
 	DataSourceFormValues,
@@ -36,6 +37,7 @@ const GeneralTab = ({
 	method,
 	isRemoteDatabase,
 }: GeneralTabProps) => {
+	const { t } = useI18n()
 	const {
 		control,
 		formState: { errors },
@@ -56,12 +58,12 @@ const GeneralTab = ({
 				<section className='space-y-4'>
 					<FieldGroup className='gap-5'>
 						{isRemoteDatabase && (
-							<FieldSeparator>Server</FieldSeparator>
+							<FieldSeparator>{t('dataSource.form.server')}</FieldSeparator>
 						)}
 
 						{isRemoteDatabase && (
 							<div className='space-y-3'>
-								<FieldLabel>Connected by</FieldLabel>
+								<FieldLabel>{t('dataSource.form.connectedBy')}</FieldLabel>
 								<Controller
 									control={control}
 									name='method'
@@ -75,7 +77,7 @@ const GeneralTab = ({
 													value='host'
 													id='host'
 												/>
-												<Label htmlFor='host'>Host</Label>
+												<Label htmlFor='host'>{t('dataSource.form.host')}</Label>
 											</div>
 
 											<div className='flex items-center gap-3'>
@@ -83,7 +85,7 @@ const GeneralTab = ({
 													value='url'
 													id='url'
 												/>
-												<Label htmlFor='url'>URL</Label>
+												<Label htmlFor='url'>{t('dataSource.form.url')}</Label>
 											</div>
 										</RadioGroup>
 									)}
@@ -93,7 +95,7 @@ const GeneralTab = ({
 
 						{method === 'url' && isRemoteDatabase && (
 							<div className='space-y-2'>
-								<FieldLabel>URL</FieldLabel>
+								<FieldLabel>{t('dataSource.form.url')}</FieldLabel>
 								<Controller
 									control={control}
 									name='url'
@@ -101,7 +103,7 @@ const GeneralTab = ({
 										<Input
 											{...field}
 											type='text'
-											placeholder='e.g. postgres://user:pass@localhost:5432/db'
+											placeholder={t('dataSource.form.urlPlaceholder')}
 											value={field.value || ''}
 										/>
 									)}
@@ -119,7 +121,7 @@ const GeneralTab = ({
 								{isRemoteDatabase && (
 									<div className='grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem]'>
 										<div className='space-y-2'>
-											<FieldLabel>Host</FieldLabel>
+											<FieldLabel>{t('dataSource.form.host')}</FieldLabel>
 											<Controller
 												control={control}
 												name='host'
@@ -127,7 +129,7 @@ const GeneralTab = ({
 													<Input
 														{...field}
 														type='text'
-														placeholder='e.g. localhost'
+														placeholder={t('dataSource.form.hostPlaceholder')}
 														value={field.value || ''}
 													/>
 												)}
@@ -140,7 +142,7 @@ const GeneralTab = ({
 										</div>
 
 										<div className='space-y-2'>
-											<FieldLabel>Port</FieldLabel>
+											<FieldLabel>{t('dataSource.form.port')}</FieldLabel>
 											<Controller
 												control={control}
 												name='port'
@@ -148,7 +150,7 @@ const GeneralTab = ({
 													<Input
 														{...field}
 														type='number'
-														placeholder='e.g. 5432'
+														placeholder={t('dataSource.form.portPlaceholder')}
 														className='[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
 														value={
 															typeof field.value === 'number' &&
@@ -190,7 +192,9 @@ const GeneralTab = ({
 
 								<div className='space-y-2'>
 									<FieldLabel>
-										{dbType === 'sqlite' ? 'File Path' : 'Database'}
+										{dbType === 'sqlite' ?
+											t('dataSource.form.filePath')
+										:	t('dataSource.form.database')}
 									</FieldLabel>
 									<Controller
 										control={control}
@@ -201,8 +205,8 @@ const GeneralTab = ({
 												type='text'
 												placeholder={
 													dbType === 'sqlite' ?
-														'e.g. ./data.sqlite'
-													:	'e.g. my_database'
+														t('dataSource.form.sqlitePathPlaceholder')
+													:	t('dataSource.form.databasePlaceholder')
 												}
 												value={field.value || ''}
 											/>
@@ -218,12 +222,12 @@ const GeneralTab = ({
 								{isRemoteDatabase && (
 									<>
 										<FieldSeparator>
-											Authentication
+											{t('dataSource.form.authentication')}
 										</FieldSeparator>
 
 										<div className='grid gap-4 sm:grid-cols-2'>
 											<div className='space-y-2'>
-												<FieldLabel>Username</FieldLabel>
+												<FieldLabel>{t('dataSource.form.username')}</FieldLabel>
 												<Controller
 													control={control}
 													name='username'
@@ -231,7 +235,7 @@ const GeneralTab = ({
 														<Input
 															{...field}
 															type='text'
-															placeholder='e.g. admin'
+															placeholder={t('dataSource.form.usernamePlaceholder')}
 															value={field.value || ''}
 														/>
 													)}
@@ -244,14 +248,14 @@ const GeneralTab = ({
 											</div>
 
 											<div className='space-y-2'>
-												<FieldLabel>Password</FieldLabel>
+												<FieldLabel>{t('dataSource.form.password')}</FieldLabel>
 												<Controller
 													control={control}
 													name='password'
 													render={({ field }) => (
 														<PasswordInput
 															{...field}
-															placeholder='Enter your password'
+															placeholder={t('dataSource.form.passwordPlaceholder')}
 															value={field.value || ''}
 														/>
 													)}
@@ -278,7 +282,7 @@ const GeneralTab = ({
 														<Label
 															htmlFor='show-all-databases'
 															className='cursor-pointer text-sm'>
-															Show all databases
+															{t('dataSource.form.showAllDatabases')}
 														</Label>
 													</div>
 												)}
@@ -297,7 +301,7 @@ const GeneralTab = ({
 														<Label
 															htmlFor='save-password'
 															className='cursor-pointer text-sm'>
-															Save password
+															{t('dataSource.form.savePassword')}
 														</Label>
 													</div>
 												)}

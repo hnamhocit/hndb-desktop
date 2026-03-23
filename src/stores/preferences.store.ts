@@ -4,13 +4,16 @@ import {
 	applyPreferencesToDom,
 	DEFAULT_PREFERENCES,
 	loadPreferences,
+	normalizePreferencesInput,
 	savePreferences,
 } from '@/services/preferences.service'
 import type {
-	AppFontSize,
+	AppFontFamily,
 	AppLanguage,
+	AppMonoFontFamily,
 	AppPreferences,
 	AppTheme,
+	UploadedFontPreference,
 } from '@/services/preferences.service'
 
 interface PreferencesStore extends AppPreferences {
@@ -20,13 +23,24 @@ interface PreferencesStore extends AppPreferences {
 	toggleTheme: () => Promise<void>
 	setLanguage: (language: AppLanguage) => Promise<void>
 	toggleLanguage: () => Promise<void>
-	setFontSize: (fontSize: AppFontSize) => Promise<void>
+	setFontSize: (fontSize: number) => Promise<void>
+	setFontFamily: (fontFamily: AppFontFamily) => Promise<void>
+	setMonoFontFamily: (monoFontFamily: AppMonoFontFamily) => Promise<void>
+	setUploadedFont: (uploadedFont: UploadedFontPreference | null) => Promise<void>
+	setUploadedMonoFont: (
+		uploadedMonoFont: UploadedFontPreference | null,
+	) => Promise<void>
+	setPreferences: (input: Partial<AppPreferences>) => Promise<void>
 }
 
 const pickPreferences = (state: PreferencesStore): AppPreferences => ({
 	theme: state.theme,
 	language: state.language,
 	fontSize: state.fontSize,
+	fontFamily: state.fontFamily,
+	monoFontFamily: state.monoFontFamily,
+	uploadedFont: state.uploadedFont,
+	uploadedMonoFont: state.uploadedMonoFont,
 })
 
 export const usePreferencesStore = create<PreferencesStore>((set, get) => ({
@@ -69,6 +83,69 @@ export const usePreferencesStore = create<PreferencesStore>((set, get) => ({
 		const next = { ...pickPreferences(get()), fontSize }
 		applyPreferencesToDom(next)
 		set({ fontSize })
+		await savePreferences(next)
+	},
+
+	setFontFamily: async (fontFamily) => {
+		const next = { ...pickPreferences(get()), fontFamily }
+		applyPreferencesToDom(next)
+		set({ fontFamily })
+		await savePreferences(next)
+	},
+
+	setMonoFontFamily: async (monoFontFamily) => {
+		const next = { ...pickPreferences(get()), monoFontFamily }
+		applyPreferencesToDom(next)
+		set({ monoFontFamily })
+		await savePreferences(next)
+	},
+
+	setUploadedFont: async (uploadedFont) => {
+		const state = get()
+		const nextFontFamily =
+			uploadedFont ? 'uploaded'
+			: state.fontFamily === 'uploaded' ? DEFAULT_PREFERENCES.fontFamily
+			:	state.fontFamily
+		const next = {
+			...pickPreferences(state),
+			fontFamily: nextFontFamily,
+			uploadedFont,
+		}
+		applyPreferencesToDom(next)
+		set({
+			fontFamily: nextFontFamily,
+			uploadedFont,
+		})
+		await savePreferences(next)
+	},
+
+	setUploadedMonoFont: async (uploadedMonoFont) => {
+		const state = get()
+		const nextMonoFontFamily =
+			uploadedMonoFont ? 'uploaded'
+			: state.monoFontFamily === 'uploaded' ?
+				DEFAULT_PREFERENCES.monoFontFamily
+			:	state.monoFontFamily
+		const next = {
+			...pickPreferences(state),
+			monoFontFamily: nextMonoFontFamily,
+			uploadedMonoFont,
+		}
+		applyPreferencesToDom(next)
+		set({
+			monoFontFamily: nextMonoFontFamily,
+			uploadedMonoFont,
+		})
+		await savePreferences(next)
+	},
+
+	setPreferences: async (input) => {
+		const next = normalizePreferencesInput({
+			...pickPreferences(get()),
+			...input,
+		})
+		applyPreferencesToDom(next)
+		set(next)
 		await savePreferences(next)
 	},
 }))

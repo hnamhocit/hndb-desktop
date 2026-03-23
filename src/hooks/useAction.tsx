@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export const useAction = (dataSourceId: string, database: string | null) => {
+export const useAction = (_dataSourceId: string, _database: string | null) => {
 	const [isSubmitting, setIsSubmitting] = useState(false)
 	const [actionType, setActionType] = useState<string | null>(null)
 

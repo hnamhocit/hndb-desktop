@@ -9,6 +9,7 @@ import {
 	ContextMenuSeparator,
 	ContextMenuTrigger,
 } from '@/components/ui/context-menu'
+import { useI18n } from '@/hooks'
 import { connectionService } from '@/services'
 import { useContextMenuStore, useMetadataStore } from '@/stores'
 import { notifyError, resolveQueryByDialect } from '@/utils'
@@ -25,6 +26,7 @@ const DatabaseContextMenu = ({
 	dataSourceId,
 	database,
 }: DatabaseContextMenuProps) => {
+	const { t } = useI18n()
 	const { databases, setDatabases, setSchema, setTables } = useMetadataStore()
 
 	const { isSubmitting, setIsSubmitting, openAction } = useContextMenuStore()
@@ -38,7 +40,7 @@ const DatabaseContextMenu = ({
 
 			setTables(`${dataSourceId}-${database}`, data.data ?? [])
 		} catch (error) {
-			notifyError(error, 'Failed to refresh tables.')
+			notifyError(error, t('errors.failedRefreshTables'))
 		}
 	}
 
@@ -55,7 +57,7 @@ const DatabaseContextMenu = ({
 
 			if (!sql) {
 				throw new Error(
-					'Drop database is not supported for this database type.',
+					t('connection.error.dropDatabaseUnsupported'),
 				)
 			}
 
@@ -70,7 +72,7 @@ const DatabaseContextMenu = ({
 			setTables(`${dataSourceId}-${database}`, [])
 			setSchema(`${dataSourceId}-${database}`, {})
 		} catch (error) {
-			notifyError(error, 'Failed to drop database.')
+			notifyError(error, t('errors.failedDropDatabase'))
 		} finally {
 			setIsSubmitting(false)
 		}
@@ -88,7 +90,7 @@ const DatabaseContextMenu = ({
 								openAction({ dataSourceId, database }, 'rename')
 							}>
 							<PencilIcon className='mr-2 h-4 w-4' />
-							Rename
+							{t('common.rename')}
 						</ContextMenuItem>
 
 						<ContextMenuItem
@@ -96,7 +98,7 @@ const DatabaseContextMenu = ({
 							variant='destructive'
 							onSelect={handleDropDatabase}>
 							<Trash2Icon className='mr-2 h-4 w-4' />
-							Delete
+							{t('common.delete')}
 						</ContextMenuItem>
 					</ContextMenuGroup>
 
@@ -106,7 +108,7 @@ const DatabaseContextMenu = ({
 						disabled={isSubmitting}
 						onSelect={handleReloadSchema}>
 						<RefreshCcwIcon className='mr-2 h-4 w-4' />
-						Refresh
+						{t('common.refresh')}
 					</ContextMenuItem>
 				</ContextMenuContent>
 			</ContextMenu>

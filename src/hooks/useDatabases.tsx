@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { connectionService } from '@/services'
 import { useConnectionStore, useMetadataStore } from '@/stores'
 import { formatErrorMessage, notifyError } from '@/utils'
+import { useI18n } from './useI18n'
 
 interface UseDatabasesOptions {
 	autoFetch?: boolean
@@ -13,6 +14,7 @@ export const useDatabases = (
 	dataSourceId: string,
 	options?: UseDatabasesOptions,
 ) => {
+	const { t } = useI18n()
 	const autoFetch = options?.autoFetch ?? true
 	const showAllOverride = options?.showAllOverride
 	const hasValidDataSourceId =
@@ -38,7 +40,7 @@ export const useDatabases = (
 		async (forceReload = false) => {
 			if (!hasValidDataSourceId) return
 			if (isDisconnected) {
-				setErrorMessage('Connection is disconnected. Please connect again.')
+				setErrorMessage(t('errors.unreachableConnection'))
 				return
 			}
 			if (!forceReload && hasCachedDatabases) return
@@ -57,23 +59,30 @@ export const useDatabases = (
 				setDatabases(dataSourceId, data.data ?? [])
 			} catch (error) {
 				setErrorMessage(
-					formatErrorMessage(error, 'Failed to fetch databases.'),
+					formatErrorMessage(
+						error,
+						t('errors.failedFetchDatabasesWithHint'),
+					),
 				)
-				notifyError(error, 'Failed to fetch databases.')
+				notifyError(
+					error,
+					t('errors.failedFetchDatabases'),
+				)
 			} finally {
 				inFlightRef.current = false
 				setIsLoading(false)
 			}
 		},
-		[
-			dataSourceId,
-			showAllDatabases,
-			hasCachedDatabases,
-			setDatabases,
-			hasValidDataSourceId,
-			isDisconnected,
-		],
-	)
+			[
+				dataSourceId,
+				showAllDatabases,
+				hasCachedDatabases,
+				setDatabases,
+				hasValidDataSourceId,
+				isDisconnected,
+				t,
+			],
+		)
 
 	useEffect(() => {
 		if (!autoFetch || !hasValidDataSourceId) return
@@ -83,9 +92,9 @@ export const useDatabases = (
 	useEffect(() => {
 		if (isDisconnected) {
 			setIsLoading(false)
-			setErrorMessage('Connection is disconnected. Please connect again.')
+			setErrorMessage(t('errors.unreachableConnection'))
 		}
-	}, [isDisconnected])
+	}, [isDisconnected, t])
 
 	const reload = useCallback(async () => {
 		await fetchDatabases(true)

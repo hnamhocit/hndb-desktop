@@ -19,7 +19,7 @@ import {
 	ContextMenuSeparator,
 	ContextMenuTrigger,
 } from '@/components/ui/context-menu'
-import { useDatabases } from '@/hooks'
+import { useDatabases, useI18n } from '@/hooks'
 import { IConnection } from '@/interfaces'
 import { connectionService } from '@/services'
 import { useConnectionStore, useContextMenuStore, useMetadataStore } from '@/stores'
@@ -34,6 +34,7 @@ interface ConnectionContextMenuProps {
 }
 
 const ConnectionContextMenu = ({ ds, children }: ConnectionContextMenuProps) => {
+	const { t } = useI18n()
 	const { reload } = useDatabases(ds.id, { autoFetch: false })
 	const { statuses, updateStatus } = useConnectionStore()
 	const { clearConnectionMetadata } = useMetadataStore()
@@ -63,13 +64,13 @@ const ConnectionContextMenu = ({ ds, children }: ConnectionContextMenuProps) => 
 				await connectionService.connect(ds.id)
 			}
 
-			updateStatus(ds.id, true)
-			toast.success(
-				isConnected ?
-					'Connection invalidated and reconnected.'
-				:	'Connection established successfully.',
-				{ position: 'top-center' },
-			)
+				updateStatus(ds.id, true)
+				toast.success(
+					isConnected ?
+						t('connection.toast.reconnected')
+					:	t('connection.toast.connected'),
+					{ position: 'top-center' },
+				)
 
 			try {
 				await reload()
@@ -78,12 +79,12 @@ const ConnectionContextMenu = ({ ds, children }: ConnectionContextMenuProps) => 
 			}
 		} catch (error) {
 			updateStatus(ds.id, false)
-			notifyError(
-				error,
-				isConnected ?
-					'Failed to reconnect data source.'
-				:	'Failed to connect data source.',
-			)
+				notifyError(
+					error,
+					isConnected ?
+						t('errors.failedReconnectDataSource')
+					:	t('errors.failedConnectDataSource'),
+				)
 		} finally {
 			setIsSubmitting(false)
 		}
@@ -96,15 +97,15 @@ const ConnectionContextMenu = ({ ds, children }: ConnectionContextMenuProps) => 
 			updateStatus(ds.id, false)
 			await connectionService.disconnect(ds.id)
 			clearConnectionMetadata(ds.id)
-			toast.success('Connection closed successfully.', {
-				position: 'top-center',
-			})
-		} catch (error) {
-			updateStatus(ds.id, true)
-			notifyError(error, 'Failed to disconnect data source.')
-		} finally {
-			setIsSubmitting(false)
-		}
+				toast.success(t('connection.toast.closed'), {
+					position: 'top-center',
+				})
+			} catch (error) {
+				updateStatus(ds.id, true)
+				notifyError(error, t('errors.failedDisconnectDataSource'))
+			} finally {
+				setIsSubmitting(false)
+			}
 	}
 
 	const handleOpen = (type: string) => {
@@ -133,62 +134,64 @@ const ConnectionContextMenu = ({ ds, children }: ConnectionContextMenuProps) => 
 									},
 									'create-database',
 								)
-							}>
-							<PlusIcon className='mr-2 h-4 w-4' />
-							Create database
-						</ContextMenuItem>
+								}>
+								<PlusIcon className='mr-2 h-4 w-4' />
+								{t('connection.menu.createDatabase')}
+							</ContextMenuItem>
 
-						<ContextMenuItem onSelect={() => handleOpen('edit')}>
-							<PenIcon className='mr-2 h-4 w-4' />
-							Edit connection
-						</ContextMenuItem>
+							<ContextMenuItem onSelect={() => handleOpen('edit')}>
+								<PenIcon className='mr-2 h-4 w-4' />
+								{t('connection.menu.editConnection')}
+							</ContextMenuItem>
 					</ContextMenuGroup>
 
 					<ContextMenuSeparator />
 
 					<ContextMenuGroup>
-						<ContextMenuItem
-							disabled={isSubmitting}
-							onSelect={handleConnectOrReconnect}>
-							<EvChargerIcon className='mr-2 h-4 w-4' />
-							{isConnected ? 'Invalidate/Reconnect' : 'Connect'}
-						</ContextMenuItem>
+							<ContextMenuItem
+								disabled={isSubmitting}
+								onSelect={handleConnectOrReconnect}>
+								<EvChargerIcon className='mr-2 h-4 w-4' />
+								{isConnected ?
+									t('connection.menu.invalidateReconnect')
+								:	t('connection.menu.connect')}
+							</ContextMenuItem>
 
-						<ContextMenuItem
-							disabled={!isConnected || isSubmitting}
-							onSelect={handleDisconnect}>
-							<UnplugIcon className='mr-2 h-4 w-4' />
-							Disconnect
-						</ContextMenuItem>
+							<ContextMenuItem
+								disabled={!isConnected || isSubmitting}
+								onSelect={handleDisconnect}>
+								<UnplugIcon className='mr-2 h-4 w-4' />
+								{t('connection.menu.disconnect')}
+							</ContextMenuItem>
 					</ContextMenuGroup>
 
 					<ContextMenuSeparator />
 
 					<ContextMenuGroup>
-						<ContextMenuItem
-							disabled={isSubmitting}
-							variant='destructive'
-							onSelect={() => handleOpen('delete')}>
-							<Trash2Icon className='mr-2 h-4 w-4' />
-							Delete
-						</ContextMenuItem>
+							<ContextMenuItem
+								disabled={isSubmitting}
+								variant='destructive'
+								onSelect={() => handleOpen('delete')}>
+								<Trash2Icon className='mr-2 h-4 w-4' />
+								{t('connection.menu.delete')}
+							</ContextMenuItem>
 
-						<ContextMenuItem
-							disabled={isSubmitting}
-							onSelect={() => handleOpen('rename')}>
-							<PencilIcon className='mr-2 h-4 w-4' />
-							Rename
-						</ContextMenuItem>
+							<ContextMenuItem
+								disabled={isSubmitting}
+								onSelect={() => handleOpen('rename')}>
+								<PencilIcon className='mr-2 h-4 w-4' />
+								{t('connection.menu.rename')}
+							</ContextMenuItem>
 					</ContextMenuGroup>
 
 					<ContextMenuSeparator />
 
-					<ContextMenuGroup>
-						<ContextMenuItem onSelect={reload}>
-							<RotateCcwIcon className='mr-2 h-4 w-4' />
-							Refresh
-						</ContextMenuItem>
-					</ContextMenuGroup>
+						<ContextMenuGroup>
+							<ContextMenuItem onSelect={reload}>
+								<RotateCcwIcon className='mr-2 h-4 w-4' />
+								{t('connection.menu.refresh')}
+							</ContextMenuItem>
+						</ContextMenuGroup>
 				</ContextMenuContent>
 			</ContextMenu>
 

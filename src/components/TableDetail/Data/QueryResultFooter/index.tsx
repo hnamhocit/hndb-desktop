@@ -1,8 +1,14 @@
-import { CheckCircle2Icon, HardDriveIcon, KeyboardIcon } from 'lucide-react'
+import {
+	AlertTriangleIcon,
+	CheckCircle2Icon,
+	HardDriveIcon,
+	KeyboardIcon,
+} from 'lucide-react'
 import { motion } from 'motion/react'
 
+import { useI18n } from '@/hooks'
 import { IQueryResult } from '@/interfaces'
-import { formatDataSize } from '@/utils'
+import { formatCompactCount, formatDataSize, formatDurationMs } from '@/utils'
 
 interface QueryResultFooterProps {
 	result: IQueryResult
@@ -13,16 +19,10 @@ const fadeUp = {
 	animate: { opacity: 1, y: 0 },
 }
 
-const formatDuration = (durationMs?: number) => {
-	if (!durationMs || durationMs <= 0) return '0ms'
-	if (durationMs >= 1000) return `${(durationMs / 1000).toFixed(1)}s`
-	if (durationMs >= 100) return `${Math.round(durationMs)}ms`
-	return `${durationMs.toFixed(1)}ms`
-}
-
 const QueryResultFooter = ({ result }: QueryResultFooterProps) => {
+	const { t } = useI18n()
 	const affectedRows = result.affectedRows ?? result.rows?.length ?? 0
-	const durationLabel = formatDuration(result.durationMs)
+	const durationLabel = formatDurationMs(result.durationMs)
 
 	return (
 		<motion.div
@@ -52,18 +52,31 @@ const QueryResultFooter = ({ result }: QueryResultFooterProps) => {
 				</motion.div>
 
 				<div className='text-xs sm:text-sm text-neutral-600 dark:text-neutral-300'>
-					<span className='font-semibold'>{affectedRows}</span>
+					<span className='font-semibold'>
+						{formatCompactCount(affectedRows)}
+					</span>
 					<span className='sm:hidden'>
 						{' '}
-						rows • <span className='font-semibold'>{durationLabel}</span>
+						{t('table.result.rows')} •{' '}
+						<span className='font-semibold'>{durationLabel}</span>
 					</span>
 					<span className='hidden sm:inline'>
 						{' '}
-						rows affected in{' '}
+						{t('table.result.rowsAffectedIn')}{' '}
 						<span className='font-semibold'>{durationLabel}</span>
 					</span>
 				</div>
 			</motion.div>
+
+			{result.isLimited && (
+				<motion.div
+					className='flex items-center gap-2 rounded border border-amber-300/80 bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 dark:border-amber-500/40 dark:bg-amber-900/30 dark:text-amber-300'
+					variants={fadeUp}
+					transition={{ duration: 0.2, ease: 'easeOut' }}>
+					<AlertTriangleIcon size={14} />
+					<span>{t('table.result.resultLimited')}</span>
+				</motion.div>
+			)}
 
 			<motion.div
 				className='flex items-center gap-3 sm:gap-4'
@@ -82,7 +95,9 @@ const QueryResultFooter = ({ result }: QueryResultFooterProps) => {
 						{formatDataSize(result.sizeBytes || 0)}
 					</span>
 					<span className='hidden sm:inline'>
-						Memory: {formatDataSize(result.sizeBytes || 0)}
+						{t('table.result.memory', {
+							size: formatDataSize(result.sizeBytes || 0),
+						})}
 					</span>
 				</motion.div>
 
@@ -97,7 +112,7 @@ const QueryResultFooter = ({ result }: QueryResultFooterProps) => {
 						damping: 22,
 					}}>
 					<KeyboardIcon size={16} />
-					<span>UTF8</span>
+					<span>{t('table.result.encodingUtf8')}</span>
 				</motion.div>
 			</motion.div>
 		</motion.div>

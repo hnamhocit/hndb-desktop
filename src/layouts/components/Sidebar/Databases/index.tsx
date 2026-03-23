@@ -7,8 +7,7 @@ import {
 	AccordionItem,
 	AccordionTrigger,
 } from '@/components/ui/accordion'
-import { useDatabases } from '@/hooks'
-import { useActiveTab } from '@/hooks'
+import { useActiveTab, useDatabases, useI18n } from '@/hooks'
 import { useActiveStore, useConnectionStore, useTabsStore } from '@/stores'
 import DatabaseContextMenu from '../DatabaseContextMenu'
 import Tables from './Tables'
@@ -19,6 +18,7 @@ interface DatabasesProps {
 }
 
 const Databases = ({ dataSourceId, autoFetch = true }: DatabasesProps) => {
+	const { t } = useI18n()
 	const { databases, isLoading, errorMessage } = useDatabases(dataSourceId, {
 		autoFetch,
 	})
@@ -47,15 +47,7 @@ const Databases = ({ dataSourceId, autoFetch = true }: DatabasesProps) => {
 	if (isLoading) {
 		return (
 			<div className='px-4 py-6 text-center text-sm text-muted-foreground'>
-				Loading databases...
-			</div>
-		)
-	}
-
-	if (connectionStatus === false) {
-		return (
-			<div className='px-4 py-6 text-center text-sm text-muted-foreground'>
-				Connection is disconnected. Connect again to load databases.
+				{t('sidebar.loadingDatabases')}
 			</div>
 		)
 	}
@@ -68,10 +60,18 @@ const Databases = ({ dataSourceId, autoFetch = true }: DatabasesProps) => {
 		)
 	}
 
+	if (connectionStatus === false) {
+		return (
+			<div className='px-4 py-6 text-center text-sm text-muted-foreground'>
+				{t('errors.unreachableConnectionLoadDatabases')}
+			</div>
+		)
+	}
+
 	if (databases.length === 0) {
 		return (
 			<div className='px-4 py-6 text-center text-sm text-muted-foreground'>
-				No databases found.
+				{t('sidebar.noDatabasesFound')}
 			</div>
 		)
 	}

@@ -3,8 +3,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { connectionService } from '@/services'
 import { useConnectionStore, useMetadataStore } from '@/stores'
 import { notifyError } from '@/utils'
+import { useI18n } from './useI18n'
 
 export const useTables = (dataSourceId: string, database: string) => {
+	const { t } = useI18n()
 	const connectionStatus = useConnectionStore(
 		(state) => state.statuses[dataSourceId],
 	)
@@ -39,21 +41,22 @@ export const useTables = (dataSourceId: string, database: string) => {
 
 				setTables(cacheKey, data.data ?? [])
 			} catch (error) {
-				notifyError(error, 'Failed to fetch tables.')
+				notifyError(error, t('errors.failedFetchTables'))
 			} finally {
 				inFlightRef.current = false
 				setIsLoading(false)
 			}
 		},
-		[
-			dataSourceId,
-			database,
-			cacheKey,
-			hasCachedTables,
-			isDisconnected,
-			setTables,
-		],
-	)
+			[
+				dataSourceId,
+				database,
+				cacheKey,
+				hasCachedTables,
+				isDisconnected,
+				setTables,
+				t,
+			],
+		)
 
 	useEffect(() => {
 		void fetchTables()

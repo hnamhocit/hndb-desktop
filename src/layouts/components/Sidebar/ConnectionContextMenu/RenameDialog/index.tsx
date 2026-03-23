@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
+import { useI18n } from '@/hooks'
 import { connectionService } from '@/services'
 import { useConnectionStore, useContextMenuStore } from '@/stores'
 import { notifyError } from '@/utils'
@@ -21,6 +22,7 @@ interface RenameDialogProps {
 
 const RenameDialog = ({ id, currentName }: RenameDialogProps) => {
 	const [renameInput, setRenameInput] = useState(currentName)
+	const { t } = useI18n()
 
 	const { target, isSubmitting, setIsSubmitting, actionType, closeAction } =
 		useContextMenuStore()
@@ -45,7 +47,7 @@ const RenameDialog = ({ id, currentName }: RenameDialogProps) => {
 		try {
 			await connectionService.rename(id, renameInput.trim())
 
-			toast.success('Renamed successfully')
+			toast.success(t('connection.toast.renamed'))
 
 			setConnections(
 				connections.map((ds) =>
@@ -53,7 +55,7 @@ const RenameDialog = ({ id, currentName }: RenameDialogProps) => {
 				),
 			)
 		} catch (error) {
-			notifyError(error, 'Failed to rename data source.')
+			notifyError(error, t('errors.failedRenameDataSource'))
 		} finally {
 			setIsSubmitting(false)
 			closeAction()
@@ -66,14 +68,14 @@ const RenameDialog = ({ id, currentName }: RenameDialogProps) => {
 			onOpenChange={closeAction}>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>Rename Data Source</DialogTitle>
+					<DialogTitle>{t('connection.dialog.renameDataSource.title')}</DialogTitle>
 				</DialogHeader>
 
 				<div className='py-4'>
 					<Input
 						value={renameInput}
 						onChange={(e) => setRenameInput(e.target.value)}
-						placeholder='Enter new data source name'
+						placeholder={t('connection.dialog.renameDataSource.placeholder')}
 						autoFocus
 					/>
 				</div>
@@ -83,7 +85,7 @@ const RenameDialog = ({ id, currentName }: RenameDialogProps) => {
 						variant='outline'
 						onClick={closeAction}
 						disabled={isSubmitting}>
-						Cancel
+						{t('common.cancel')}
 					</Button>
 
 					<Button
@@ -93,7 +95,9 @@ const RenameDialog = ({ id, currentName }: RenameDialogProps) => {
 							!renameInput.trim() ||
 							renameInput.trim() === currentName
 						}>
-						{isSubmitting ? 'Saving...' : 'Save'}
+						{isSubmitting ?
+							t('connection.dialog.renameDataSource.saving')
+						:	t('common.save')}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

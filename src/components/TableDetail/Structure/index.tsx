@@ -1,10 +1,11 @@
 import { Key, List, MoreVertical } from 'lucide-react'
 import { useMemo } from 'react'
 
-import { useActiveTab, useSchema } from '@/hooks'
+import { useActiveTab, useI18n, useSchema } from '@/hooks'
 import { getTabConnectionId, resolveSchemaColumns } from '@/utils'
 
 const TableStructure = () => {
+	const { t } = useI18n()
 	const activeTab = useActiveTab()
 	const connectionId = getTabConnectionId(activeTab) ?? ''
 	const { schema, isLoading } = useSchema(
@@ -20,7 +21,7 @@ const TableStructure = () => {
 	if (isLoading && columns.length === 0) {
 		return (
 			<div className='w-full min-h-screen flex items-center justify-center text-sm text-muted-foreground'>
-				Loading structure...
+				{t('table.structure.loading')}
 			</div>
 		)
 	}
@@ -28,7 +29,7 @@ const TableStructure = () => {
 	if (!isLoading && columns.length === 0) {
 		return (
 			<div className='w-full min-h-screen flex items-center justify-center text-sm text-muted-foreground'>
-				No column metadata available for this table yet.
+				{t('table.structure.noMetadata')}
 			</div>
 		)
 	}
@@ -41,12 +42,24 @@ const TableStructure = () => {
 					<thead className='text-[11px] font-bold tracking-wider text-slate-500 uppercase border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-transparent'>
 						<tr>
 							<th className='px-6 py-4 w-16'>#</th>
-							<th className='px-6 py-4 w-32'>Constraints</th>
-							<th className='px-6 py-4'>Column Name</th>
-							<th className='px-6 py-4'>Data Type</th>
-							<th className='px-6 py-4'>Nullable</th>
-							<th className='px-6 py-4'>Default</th>
-							<th className='px-6 py-4 text-right'>Actions</th>
+							<th className='px-6 py-4 w-32'>
+								{t('table.structure.constraints')}
+							</th>
+							<th className='px-6 py-4'>
+								{t('table.structure.columnName')}
+							</th>
+							<th className='px-6 py-4'>
+								{t('table.structure.dataType')}
+							</th>
+							<th className='px-6 py-4'>
+								{t('table.structure.nullable')}
+							</th>
+							<th className='px-6 py-4'>
+								{t('table.structure.default')}
+							</th>
+							<th className='px-6 py-4 text-right'>
+								{t('table.structure.actions')}
+							</th>
 						</tr>
 					</thead>
 
@@ -106,10 +119,10 @@ const TableStructure = () => {
 								<td className='px-6 py-4'>
 									{col.is_nullable ?
 										<span className='border border-slate-200 dark:border-slate-600/60 bg-slate-100 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide'>
-											Nullable
+											{t('table.structure.nullable')}
 										</span>
 									:	<span className='border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide'>
-											Not Null
+											{t('table.structure.notNull')}
 										</span>
 									}
 								</td>
@@ -122,7 +135,7 @@ const TableStructure = () => {
 
 								<td className='px-6 py-4 text-right'>
 									<button
-										title='action'
+										title={t('table.structure.actionTitle')}
 										className='text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-colors p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700/50 inline-flex items-center justify-center'>
 										<MoreVertical size={16} />
 									</button>

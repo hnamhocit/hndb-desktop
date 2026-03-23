@@ -6,6 +6,7 @@ import { type ReactNode, useState } from 'react'
 import DatabaseTypeStep from '@/components/DataSourceDialog/components/DatabaseTypeStep'
 import DataSourceDialogForm from '@/components/DataSourceDialog/components/DataSourceDialogForm'
 import useDataSourceDialogForm from '@/components/DataSourceDialog/hooks/useDataSourceDialogForm'
+import { useI18n } from '@/hooks'
 import { getDialogTitle } from '@/components/DataSourceDialog/utils'
 import {
 	Dialog,
@@ -30,6 +31,7 @@ const DataSourceDialog = ({
 }: DataSourceDialogProps) => {
 	const [internalIsOpen, setInternalIsOpen] = useState(false)
 	const isDialogOpen = open !== undefined ? open : internalIsOpen
+	const { t } = useI18n()
 
 	const setDialogOpen = (nextOpen: boolean) => {
 		onOpenChange?.(nextOpen)
@@ -71,6 +73,7 @@ const DataSourceDialog = ({
 		step,
 		isEditMode,
 		selectedName: selectedDbInfo?.name,
+		t,
 	})
 
 	return (
@@ -84,7 +87,7 @@ const DataSourceDialog = ({
 					<DialogTitle className='flex items-center gap-3 pr-8 text-xl'>
 						{step === 2 && !isEditMode && (
 							<button
-								title='go back'
+								title={t('dataSource.dialog.goBack')}
 								type='button'
 								onClick={() => setStep(1)}
 								className='inline-flex size-9 items-center justify-center rounded-xl border border-border/70 bg-background/80 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground'>

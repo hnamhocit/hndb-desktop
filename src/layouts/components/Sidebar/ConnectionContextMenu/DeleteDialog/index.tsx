@@ -9,6 +9,7 @@ import {
 	AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { useI18n } from '@/hooks'
 import { connectionService } from '@/services'
 import { useConnectionStore, useContextMenuStore } from '@/stores'
 import { notifyError } from '@/utils'
@@ -18,6 +19,7 @@ interface DeleteDialogProps {
 }
 
 const DeleteDialog = ({ id }: DeleteDialogProps) => {
+	const { t } = useI18n()
 	const { target, setIsSubmitting, isSubmitting, actionType, closeAction } =
 		useContextMenuStore()
 	const { connections, setConnections, clearStatus } = useConnectionStore()
@@ -33,11 +35,11 @@ const DeleteDialog = ({ id }: DeleteDialogProps) => {
 		try {
 			await connectionService.delete(id)
 
-			toast.success('Deleted successfully')
+			toast.success(t('connection.toast.deleted'))
 			setConnections(connections.filter((ds) => ds.id !== id))
 			clearStatus(id)
 		} catch (error) {
-			notifyError(error, 'Failed to delete data source.')
+			notifyError(error, t('errors.failedDeleteDataSource'))
 		} finally {
 			setIsSubmitting(false)
 			closeAction()
@@ -51,19 +53,21 @@ const DeleteDialog = ({ id }: DeleteDialogProps) => {
 			<AlertDialogContent>
 				<AlertDialogHeader>
 					<AlertDialogTitle>
-						Are you sure you want to delete this data source?
+						{t('connection.dialog.deleteDataSource.confirmTitle')}
 					</AlertDialogTitle>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					{/* Thêm nút Cancel để UX tốt hơn */}
 					<AlertDialogCancel disabled={isSubmitting}>
-						Cancel
+						{t('common.cancel')}
 					</AlertDialogCancel>
 					<Button
 						variant='destructive'
 						onClick={handleDelete}
 						disabled={isSubmitting}>
-						{isSubmitting ? 'Deleting...' : 'Delete'}
+						{isSubmitting ?
+							t('connection.dialog.deleteDataSource.deleting')
+						:	t('common.delete')}
 					</Button>
 				</AlertDialogFooter>
 			</AlertDialogContent>
