@@ -1,6 +1,5 @@
 use crate::helpers::{
-    check_and_disconnect_if_fatal, ensure_connection_is_connected,
-    get_or_create_active_connection,
+    check_and_disconnect_if_fatal, ensure_connection_is_connected, get_or_create_active_connection,
 };
 use crate::state::AppState;
 

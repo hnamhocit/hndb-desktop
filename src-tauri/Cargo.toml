@@ -42,6 +42,8 @@ keyring = { version = "3.6.3", features = [
   "linux-native-sync-persistent",
   "crypto-rust",
 ] }
+sea-query = { version = "0.32.7", features = ["backend-mysql", "backend-postgres", "backend-sqlite"] }
+sea-query-binder = { version = "0.7.0", features = ["sqlx-postgres", "sqlx-mysql", "sqlx-sqlite"] }
 
 # single-instance chỉ cần trên desktop, không dùng trên mobile
 [target."cfg(any(target_os = \"macos\", windows, target_os = \"linux\"))".dependencies]

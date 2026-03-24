@@ -11,14 +11,14 @@ pub async fn list_connection_statuses(
     let connections = list_saved_connections(&app)?;
     let active_connection_ids = {
         let active_connections = state.active_connections.lock().await;
-        active_connections
-            .keys()
-            .cloned()
-            .collect::<HashSet<_>>()
+        active_connections.keys().cloned().collect::<HashSet<_>>()
     };
     let manually_disconnected_ids = {
         let manually_disconnected = state.manually_disconnected_connections.lock().await;
-        manually_disconnected.iter().cloned().collect::<HashSet<_>>()
+        manually_disconnected
+            .iter()
+            .cloned()
+            .collect::<HashSet<_>>()
     };
 
     let mut statuses = HashMap::new();
@@ -29,7 +29,10 @@ pub async fn list_connection_statuses(
             continue;
         }
 
-        statuses.insert(connection.id.clone(), active_connection_ids.contains(&connection.id));
+        statuses.insert(
+            connection.id.clone(),
+            active_connection_ids.contains(&connection.id),
+        );
     }
 
     Ok(statuses)

@@ -1,7 +1,7 @@
 use crate::db_client::DbClient;
 use crate::helpers::{
-    check_and_disconnect_if_fatal, ensure_connection_is_connected,
-    get_config_by_id, get_or_create_database_connection,
+    check_and_disconnect_if_fatal, ensure_connection_is_connected, get_config_by_id,
+    get_or_create_database_connection,
 };
 use crate::state::AppState;
 use crate::types::TableColumn;
@@ -391,33 +391,29 @@ pub async fn get_table_schema(
     ensure_connection_is_connected(&id, &state).await?;
 
     let config = get_config_by_id(&app, id.as_str())?;
-    let client = match get_or_create_database_connection(id.as_str(), database.as_str(), &app, &state).await {
-        Ok(c) => c,
-        Err(e) => {
-            check_and_disconnect_if_fatal(&id, &state, &e).await;
-            return Err(e);
-        }
-    };
+    let client =
+        match get_or_create_database_connection(id.as_str(), database.as_str(), &app, &state).await
+        {
+            Ok(c) => c,
+            Err(e) => {
+                check_and_disconnect_if_fatal(&id, &state, &e).await;
+                return Err(e);
+            }
+        };
 
     let schema_result = match config.driver.as_str() {
-        "postgres" => {
-            match client.run_sql(build_postgres_schema_query()).await {
-                Ok(raw) => Ok(rows_to_schema(parse_json_rows(&raw)?)),
-                Err(e) => Err(e),
-            }
-        }
-        "mysql" | "mariadb" => {
-            match client.run_sql(build_mysql_schema_query()).await {
-                Ok(raw) => Ok(rows_to_schema(parse_json_rows(&raw)?)),
-                Err(e) => Err(e),
-            }
-        }
-        "mssql" => {
-            match client.run_sql(build_mssql_schema_query()).await {
-                Ok(raw) => Ok(rows_to_schema(parse_json_rows(&raw)?)),
-                Err(e) => Err(e),
-            }
-        }
+        "postgres" => match client.run_sql(build_postgres_schema_query()).await {
+            Ok(raw) => Ok(rows_to_schema(parse_json_rows(&raw)?)),
+            Err(e) => Err(e),
+        },
+        "mysql" | "mariadb" => match client.run_sql(build_mysql_schema_query()).await {
+            Ok(raw) => Ok(rows_to_schema(parse_json_rows(&raw)?)),
+            Err(e) => Err(e),
+        },
+        "mssql" => match client.run_sql(build_mssql_schema_query()).await {
+            Ok(raw) => Ok(rows_to_schema(parse_json_rows(&raw)?)),
+            Err(e) => Err(e),
+        },
         "sqlite" => fetch_sqlite_schema(&client, &database).await,
         driver => {
             return Err(format!(

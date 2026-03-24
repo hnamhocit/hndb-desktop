@@ -1,7 +1,12 @@
 import { invoke } from '@tauri-apps/api/core'
 
-import type { IColumn, IConnection, IRelationship } from '@/interfaces'
 import type { ConnectionConfigPayload } from '@/components/DataSourceDialog/utils'
+import type {
+	IColumn,
+	IConnection,
+	IRecordChangeset,
+	IRelationship,
+} from '@/interfaces'
 import { useConnectionStore } from '@/stores'
 import { formatErrorMessage } from '@/utils'
 
@@ -65,7 +70,10 @@ const isExplainableQuery = (query: string) => {
 	return firstCommand === 'SELECT' || firstCommand === 'WITH'
 }
 
-const buildExplainQuery = (driver: IConnection['config']['driver'], query: string) => {
+const buildExplainQuery = (
+	driver: IConnection['config']['driver'],
+	query: string,
+) => {
 	const normalizedQuery = trimTrailingSemicolons(query.trim())
 
 	switch (driver) {
@@ -192,6 +200,22 @@ export const connectionService = {
 		return wrapData(tables)
 	},
 
+	async applyChangeset(
+		connectionId: string,
+		database: string,
+		table: string,
+		primaryKey: string,
+		changeset: IRecordChangeset,
+	) {
+		return invoke<void>('apply_changeset', {
+			connectionId,
+			database,
+			tableName: table,
+			primaryKey,
+			changeset,
+		})
+	},
+
 	async executeQuery(
 		connectionId: string,
 		database: string | null,
@@ -316,7 +340,11 @@ export const connectionService = {
 				throw error
 			}
 
-			rows = await invokeQueryRows(connectionId, database, fallbackExplainQuery)
+			rows = await invokeQueryRows(
+				connectionId,
+				database,
+				fallbackExplainQuery,
+			)
 		}
 
 		syncConnectionStatusesInBackground()

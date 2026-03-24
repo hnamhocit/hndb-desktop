@@ -14,7 +14,7 @@ export const useSchema = (connectionId: string, database: string) => {
 	const connectionStatus = useConnectionStore(
 		(state) => state.statuses[connectionId],
 	)
-	const { schema: cachedSchema, setSchema } = useMetadataStore()
+	const { schema: cachedSchema, setSchema, refreshTick } = useMetadataStore()
 	const [isLoading, setIsLoading] = useState(false)
 	const inFlightRef = useRef(false)
 
@@ -52,20 +52,26 @@ export const useSchema = (connectionId: string, database: string) => {
 				setIsLoading(false)
 			}
 		},
-			[
-				connectionId,
-				database,
-				cacheKey,
-				hasCachedSchema,
-				isDisconnected,
-				setSchema,
-				t,
-			],
-		)
+		[
+			connectionId,
+			database,
+			cacheKey,
+			hasCachedSchema,
+			isDisconnected,
+			setSchema,
+			t,
+		],
+	)
 
 	useEffect(() => {
 		void fetchSchema()
 	}, [fetchSchema, connectionId, database])
+
+	useEffect(() => {
+		if (refreshTick > 0) {
+			void fetchSchema(true)
+		}
+	}, [refreshTick, fetchSchema])
 
 	const reload = useCallback(async () => {
 		await fetchSchema(true)

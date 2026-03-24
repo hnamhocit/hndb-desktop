@@ -54,6 +54,8 @@ export const useTabsStore = create<TabsState>()(
 					)
 
 					const newTabs = state.tabs.filter((tab) => tab.id !== id)
+					const { [id]: _removedContent, ...nextContentById } =
+						state.contentById
 
 					let newActiveTabId = useActiveStore.getState().activeTabId
 
@@ -74,6 +76,7 @@ export const useTabsStore = create<TabsState>()(
 
 					return {
 						tabs: newTabs,
+						contentById: nextContentById,
 					}
 				}),
 		}),

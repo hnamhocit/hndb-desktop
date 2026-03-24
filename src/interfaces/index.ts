@@ -1,3 +1,4 @@
+export * from './changeset'
 export * from './column'
 export * from './connection'
 export * from './query_meta'

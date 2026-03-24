@@ -14,7 +14,12 @@ import { format as formatSql } from 'sql-formatter'
 import { useActiveTab, useI18n } from '@/hooks'
 import { IConnection, IQueryResult } from '@/interfaces'
 import { connectionService } from '@/services'
-import { useConnectionStore, usePreferencesStore, useTabsStore } from '@/stores'
+import {
+	useConnectionStore,
+	useMetadataStore,
+	usePreferencesStore,
+	useTabsStore,
+} from '@/stores'
 import {
 	exportToCsv,
 	formatCompactCount,
@@ -152,6 +157,7 @@ const QueryBuilder = () => {
 	} | null>(null)
 
 	const { contentById, commitContent } = useTabsStore()
+	const { triggerRefresh } = useMetadataStore()
 	const monacoTheme = usePreferencesStore((state) => state.monacoTheme)
 	const setMonacoTheme = usePreferencesStore((state) => state.setMonacoTheme)
 	const openSettingsShortcut = usePreferencesStore(
@@ -302,6 +308,11 @@ const QueryBuilder = () => {
 				query,
 				forced,
 			)
+
+			// Simple DDL detection to trigger refresh for schema/databases/tables
+			if (/^\s*(CREATE|ALTER|DROP|RENAME|TRUNCATE)\b/i.test(query)) {
+				triggerRefresh()
+			}
 
 			setResult(data.data)
 			setExecutedQuery(query)

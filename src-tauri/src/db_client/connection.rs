@@ -1,6 +1,6 @@
-use std::str::FromStr;
-use sqlx::postgres::PgConnectOptions;
 use super::{mssql, DbClient};
+use sqlx::postgres::PgConnectOptions;
+use std::str::FromStr;
 
 impl DbClient {
     pub async fn connect(driver: &str, url: &str) -> Result<Self, String> {

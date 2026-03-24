@@ -609,7 +609,6 @@ const useDataSourceDialogForm = ({
 
 			setDialogOpen(false)
 		} catch (error) {
-			console.log({ error })
 			notifyError(
 				error,
 				isEditMode ?

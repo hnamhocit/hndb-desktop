@@ -10,7 +10,7 @@ export const useTables = (dataSourceId: string, database: string) => {
 	const connectionStatus = useConnectionStore(
 		(state) => state.statuses[dataSourceId],
 	)
-	const { tables: cachedTables, setTables } = useMetadataStore()
+	const { tables: cachedTables, setTables, refreshTick } = useMetadataStore()
 	const [isLoading, setIsLoading] = useState(false)
 	const inFlightRef = useRef(false)
 
@@ -47,20 +47,26 @@ export const useTables = (dataSourceId: string, database: string) => {
 				setIsLoading(false)
 			}
 		},
-			[
-				dataSourceId,
-				database,
-				cacheKey,
-				hasCachedTables,
-				isDisconnected,
-				setTables,
-				t,
-			],
-		)
+		[
+			dataSourceId,
+			database,
+			cacheKey,
+			hasCachedTables,
+			isDisconnected,
+			setTables,
+			t,
+		],
+	)
 
 	useEffect(() => {
 		void fetchTables()
 	}, [fetchTables, dataSourceId, database])
+
+	useEffect(() => {
+		if (refreshTick > 0) {
+			void fetchTables(true)
+		}
+	}, [refreshTick, fetchTables])
 
 	const reload = useCallback(async () => {
 		await fetchTables(true)

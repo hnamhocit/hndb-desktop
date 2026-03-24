@@ -4,10 +4,10 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { useActiveTab, useActiveTablePath, useI18n } from '@/hooks'
-import { IColumn } from '@/interfaces'
+import { IColumn, IRecordChangeset } from '@/interfaces'
 import { connectionService } from '@/services'
 import { useActiveStore, useDataEditorStore } from '@/stores'
-import { generateSqlStatements, notifyError } from '@/utils'
+import { notifyError } from '@/utils'
 import DeleteButton from './DeleteButton'
 import RefreshButton from './RefreshButton'
 import SettingsButton from './SettingsButton'
@@ -19,16 +19,12 @@ interface ActionsProps {
 	columns: IColumn[]
 }
 
-const Actions = ({
-	refreshData,
-	primaryColumnName,
-	columns,
-}: ActionsProps) => {
+const Actions = ({ refreshData, primaryColumnName, columns }: ActionsProps) => {
 	const [isSaving, setIsSaving] = useState(false)
 	const { t } = useI18n()
 
 	const activeTab = useActiveTab()
-	const { connectionId, database } = useActiveStore()
+	const { connectionId } = useActiveStore()
 	const {
 		addEmptyRow,
 		tablesState,
@@ -50,19 +46,41 @@ const Actions = ({
 	}
 
 	const handleSave = async () => {
-		if (!tableState || !activeTab) return
+		if (
+			!tableState ||
+			!activeTab ||
+			!connectionId ||
+			!activeTab.database ||
+			!activeTab.table
+		) {
+			return
+		}
 
-		const sqlQueries = generateSqlStatements(primaryColumnName, tablePath)
-		if (sqlQueries.length === 0) return
+		const {
+			insertChangeset = {},
+			updateChangeset = {},
+			deleteChangeset = {},
+			newRowIds = [],
+		} = tableState
+
+		const changeset: IRecordChangeset = {
+			inserts: newRowIds.map((id) => insertChangeset[id]).filter(Boolean),
+			updates: Object.entries(updateChangeset).map(([id, changes]) => ({
+				id,
+				changes,
+			})),
+			deletes: Object.keys(deleteChangeset),
+		}
 
 		setIsSaving(true)
 
 		try {
-			await connectionService.executeQuery(
-				connectionId!,
-				database!,
-				sqlQueries.join('\n'),
-				true, // forced execution to allow multiple statements
+			await connectionService.applyChangeset(
+				connectionId,
+				activeTab.database,
+				activeTab.table,
+				primaryColumnName,
+				changeset,
 			)
 
 			await refreshData()

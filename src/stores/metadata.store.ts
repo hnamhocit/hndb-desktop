@@ -22,6 +22,9 @@ interface MetadataStore {
 	relationships: Record<string, IRelationship[]>
 	setRelationships: (id: string, relationships: IRelationship[]) => void
 	clearConnectionMetadata: (connectionId: string) => void
+
+	refreshTick: number
+	triggerRefresh: () => void
 }
 
 export const useMetadataStore = create<MetadataStore>((set) => ({
@@ -90,4 +93,8 @@ export const useMetadataStore = create<MetadataStore>((set) => ({
 				relationships: nextRelationships,
 			}
 		}),
+
+	refreshTick: 0,
+	triggerRefresh: () =>
+		set((state) => ({ refreshTick: state.refreshTick + 1 })),
 }))

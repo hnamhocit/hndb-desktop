@@ -1,3 +1,4 @@
+pub mod changeset;
 pub mod connection_config;
 pub mod connection_mode;
 pub mod db_setting;

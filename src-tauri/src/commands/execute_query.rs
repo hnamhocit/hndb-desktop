@@ -1,6 +1,6 @@
 use crate::helpers::{
-    check_and_disconnect_if_fatal, ensure_connection_is_connected,
-    get_or_create_active_connection, get_or_create_database_connection,
+    check_and_disconnect_if_fatal, ensure_connection_is_connected, get_or_create_active_connection,
+    get_or_create_database_connection,
 };
 use crate::state::AppState;
 
@@ -93,8 +93,7 @@ pub async fn execute_query(
     }
 
     let client = if let Some(target_database) = database.as_deref() {
-        match get_or_create_database_connection(id.as_str(), target_database, &app, &state).await
-        {
+        match get_or_create_database_connection(id.as_str(), target_database, &app, &state).await {
             Ok(client) => client,
             Err(e) => {
                 check_and_disconnect_if_fatal(&id, &state, &e).await;

@@ -27,7 +27,11 @@ export const useDatabases = (
 	const connectionStatus = useConnectionStore(
 		(state) => state.statuses[dataSourceId],
 	)
-	const { databases: cachedDatabases, setDatabases } = useMetadataStore()
+	const {
+		databases: cachedDatabases,
+		setDatabases,
+		refreshTick,
+	} = useMetadataStore()
 	const cached =
 		hasValidDataSourceId ? cachedDatabases[dataSourceId] : undefined
 	const hasCachedDatabases = cached !== undefined
@@ -70,30 +74,33 @@ export const useDatabases = (
 						t('errors.failedFetchDatabasesWithHint'),
 					),
 				)
-				notifyError(
-					error,
-					t('errors.failedFetchDatabases'),
-				)
+				notifyError(error, t('errors.failedFetchDatabases'))
 			} finally {
 				inFlightRef.current = false
 				setIsLoading(false)
 			}
 		},
-			[
-				dataSourceId,
-				showAllDatabases,
-				hasCachedDatabases,
-				setDatabases,
-				hasValidDataSourceId,
-				isDisconnected,
-				t,
-			],
-		)
+		[
+			dataSourceId,
+			showAllDatabases,
+			hasCachedDatabases,
+			setDatabases,
+			hasValidDataSourceId,
+			isDisconnected,
+			t,
+		],
+	)
 
 	useEffect(() => {
 		if (!autoFetch || !hasValidDataSourceId) return
 		void fetchDatabases()
 	}, [fetchDatabases, autoFetch, hasValidDataSourceId])
+
+	useEffect(() => {
+		if (refreshTick > 0 && autoFetch && hasValidDataSourceId) {
+			void fetchDatabases(true)
+		}
+	}, [refreshTick, autoFetch, hasValidDataSourceId, fetchDatabases])
 
 	const reload = useCallback(async () => {
 		await fetchDatabases(true)

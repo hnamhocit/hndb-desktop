@@ -1,6 +1,6 @@
+use super::{build_conn_str, get_config_by_id, override_database};
 use crate::db_client::DbClient;
 use crate::state::AppState;
-use super::{build_conn_str, get_config_by_id, override_database};
 
 pub async fn ensure_connection_is_connected(
     id: &str,

@@ -1,6 +1,6 @@
 use crate::helpers::{
-    check_and_disconnect_if_fatal, ensure_connection_is_connected,
-    get_config_by_id, get_or_create_database_connection,
+    check_and_disconnect_if_fatal, ensure_connection_is_connected, get_config_by_id,
+    get_or_create_database_connection,
 };
 use crate::state::AppState;
 use crate::types::TablePreviewResult;
@@ -54,13 +54,15 @@ pub async fn get_table_preview(
 ) -> Result<TablePreviewResult, String> {
     ensure_connection_is_connected(&id, &state).await?;
 
-    let client = match get_or_create_database_connection(id.as_str(), database.as_str(), &app, &state).await {
-        Ok(c) => c,
-        Err(e) => {
-            check_and_disconnect_if_fatal(&id, &state, &e).await;
-            return Err(e);
-        }
-    };
+    let client =
+        match get_or_create_database_connection(id.as_str(), database.as_str(), &app, &state).await
+        {
+            Ok(c) => c,
+            Err(e) => {
+                check_and_disconnect_if_fatal(&id, &state, &e).await;
+                return Err(e);
+            }
+        };
 
     let config = get_config_by_id(&app, id.as_str())?;
     let query = build_preview_query(&config.driver, &database, &table, page, limit);

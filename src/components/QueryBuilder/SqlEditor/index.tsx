@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from 'react'
 
 import { useActiveTab, useSchema } from '@/hooks'
 import { registerAppMonacoThemes } from '@/lib/monaco-theme'
-import { usePreferencesStore, useTabsStore } from '@/stores'
+import { useConnectionStore, usePreferencesStore, useTabsStore } from '@/stores'
 import { getTabConnectionId } from '@/utils'
 
 const SQL_KEYWORDS = [
@@ -40,6 +40,122 @@ const SQL_KEYWORDS = [
 	'NOT',
 	'NULL',
 ] as const
+
+const COMMON_DATA_TYPES = [
+	'VARCHAR',
+	'INTEGER',
+	'INT',
+	'BOOLEAN',
+	'DATE',
+	'TIMESTAMP',
+	'TEXT',
+	'DECIMAL',
+	'NUMERIC',
+	'REAL',
+	'DOUBLE PRECISION',
+	'CHAR',
+	'SMALLINT',
+	'BIGINT',
+]
+
+const DRIVER_SPECIFIC_DATA_TYPES: Record<string, string[]> = {
+	postgres: [
+		'JSONB',
+		'JSON',
+		'UUID',
+		'TIMESTAMPTZ',
+		'SERIAL',
+		'BIGSERIAL',
+		'BYTEA',
+		'MONEY',
+		'INET',
+		'CIDR',
+		'MACADDR',
+		'TSVECTOR',
+		'TSQUERY',
+	],
+	mysql: [
+		'TINYINT',
+		'MEDIUMINT',
+		'DATETIME',
+		'TINYTEXT',
+		'MEDIUMTEXT',
+		'LONGTEXT',
+		'ENUM',
+		'SET',
+		'BLOB',
+		'LONGBLOB',
+		'JSON',
+	],
+	mariadb: [
+		'TINYINT',
+		'MEDIUMINT',
+		'DATETIME',
+		'TINYTEXT',
+		'MEDIUMTEXT',
+		'LONGTEXT',
+		'ENUM',
+		'SET',
+		'BLOB',
+		'LONGBLOB',
+		'JSON',
+	],
+	mssql: [
+		'NVARCHAR',
+		'BIT',
+		'DATETIME2',
+		'UNIQUEIDENTIFIER',
+		'DATETIMEOFFSET',
+		'SMALLDATETIME',
+		'FLOAT',
+		'MONEY',
+		'SMALLMONEY',
+		'SQL_VARIANT',
+		'VARBINARY',
+	],
+	sqlite: ['BLOB', 'NONE'],
+}
+
+const COMMON_CONSTRAINTS_AND_FUNCTIONS = [
+	'PRIMARY KEY',
+	'FOREIGN KEY',
+	'UNIQUE',
+	'NOT NULL',
+	'DEFAULT',
+	'CHECK',
+	'REFERENCES',
+	'CURRENT_TIMESTAMP',
+	'CURRENT_DATE',
+	'CURRENT_TIME',
+]
+
+const DRIVER_SPECIFIC_FUNCTIONS: Record<string, string[]> = {
+	postgres: [
+		'GEN_RANDOM_UUID()',
+		'UUID_GENERATE_V4()',
+		'NOW()',
+		'COALESCE',
+		'CONCAT',
+		'EXTRACT',
+		'RETURNING',
+	],
+	mysql: [
+		'AUTO_INCREMENT',
+		'NOW()',
+		'IFNULL',
+		'CONCAT',
+		'ON UPDATE CURRENT_TIMESTAMP',
+	],
+	mariadb: [
+		'AUTO_INCREMENT',
+		'NOW()',
+		'IFNULL',
+		'CONCAT',
+		'ON UPDATE CURRENT_TIMESTAMP',
+	],
+	mssql: ['IDENTITY(1,1)', 'NEWID()', 'GETDATE()', 'ISNULL'],
+	sqlite: ['AUTOINCREMENT'],
+}
 
 const SQL_ALIAS_STOP_WORDS = new Set([
 	'ON',
@@ -110,8 +226,10 @@ const parseTableContexts = (
 
 		const normalizedAlias = rawAlias ? normalizeSqlIdentifier(rawAlias) : ''
 		const alias =
-			normalizedAlias &&
-			!SQL_ALIAS_STOP_WORDS.has(normalizedAlias.toUpperCase()) ?
+			(
+				normalizedAlias &&
+				!SQL_ALIAS_STOP_WORDS.has(normalizedAlias.toUpperCase())
+			) ?
 				normalizedAlias
 			:	null
 
@@ -127,9 +245,13 @@ const parseTableContexts = (
 }
 
 const getCurrentStatementContext = (sql: string, offset: number) => {
-	const previousStatementBoundary = sql.lastIndexOf(';', Math.max(0, offset - 1))
+	const previousStatementBoundary = sql.lastIndexOf(
+		';',
+		Math.max(0, offset - 1),
+	)
 	const nextStatementBoundary = sql.indexOf(';', offset)
-	const statementStart = previousStatementBoundary >= 0 ? previousStatementBoundary + 1 : 0
+	const statementStart =
+		previousStatementBoundary >= 0 ? previousStatementBoundary + 1 : 0
 	const statementEnd =
 		nextStatementBoundary >= 0 ? nextStatementBoundary : sql.length
 	const statementText = sql.slice(statementStart, statementEnd)
@@ -148,7 +270,9 @@ const getQualifierBeforeCursor = (textBeforeCursor: string) => {
 }
 
 const isExpectingTableName = (textBeforeCursor: string) =>
-	/\b(?:FROM|JOIN|UPDATE|INTO)\s+[A-Za-z0-9_."`\[\]]*$/i.test(textBeforeCursor)
+	/\b(?:FROM|JOIN|UPDATE|INTO)\s+[A-Za-z0-9_."`\[\]]*$/i.test(
+		textBeforeCursor,
+	)
 
 export default function SqlEditor() {
 	const { commitContent, contentById } = useTabsStore()
@@ -157,6 +281,9 @@ export default function SqlEditor() {
 	const activeTab = useActiveTab()
 	const connectionId = getTabConnectionId(activeTab) ?? ''
 	const database = activeTab?.database ?? ''
+	const connections = useConnectionStore((state) => state.connections)
+	const connectionDriver =
+		connections.find((c) => c.id === connectionId)?.config.driver ?? 'mysql'
 	const { schema } = useSchema(connectionId, database)
 	const completionDisposableRef = useRef<{ dispose: () => void } | null>(null)
 	const schemaRef = useRef<Record<string, string[]>>({})
@@ -194,13 +321,12 @@ export default function SqlEditor() {
 
 	const registerCompletionProvider = (monaco: Monaco) => {
 		completionDisposableRef.current?.dispose()
-		completionDisposableRef.current = monaco.languages.registerCompletionItemProvider(
-				'sql',
-				{
-					provideCompletionItems(
-						model: MonacoEditor.ITextModel,
-						position: Position,
-					) {
+		completionDisposableRef.current =
+			monaco.languages.registerCompletionItemProvider('sql', {
+				provideCompletionItems(
+					model: MonacoEditor.ITextModel,
+					position: Position,
+				) {
 					const word = model.getWordUntilPosition(position)
 					const fullText = model.getValue()
 					const cursorOffset = model.getOffsetAt(position)
@@ -210,10 +336,10 @@ export default function SqlEditor() {
 						statementText,
 						schemaRef.current,
 					)
-					const qualifierBeforeCursor = getQualifierBeforeCursor(
-						textBeforeCursor,
-					)
-					const isTypingTableName = isExpectingTableName(textBeforeCursor)
+					const qualifierBeforeCursor =
+						getQualifierBeforeCursor(textBeforeCursor)
+					const isTypingTableName =
+						isExpectingTableName(textBeforeCursor)
 					const range = {
 						startLineNumber: position.lineNumber,
 						endLineNumber: position.lineNumber,
@@ -226,6 +352,28 @@ export default function SqlEditor() {
 						kind: monaco.languages.CompletionItemKind.Keyword,
 						insertText: keyword,
 						range,
+					}))
+
+					const dataTypeSuggestions = [
+						...COMMON_DATA_TYPES,
+						...(DRIVER_SPECIFIC_DATA_TYPES[connectionDriver] ?? []),
+					].map((dataType) => ({
+						label: dataType,
+						kind: monaco.languages.CompletionItemKind.TypeParameter,
+						insertText: dataType,
+						range,
+						detail: 'Data Type',
+					}))
+
+					const functionSuggestions = [
+						...COMMON_CONSTRAINTS_AND_FUNCTIONS,
+						...(DRIVER_SPECIFIC_FUNCTIONS[connectionDriver] ?? []),
+					].map((func) => ({
+						label: func,
+						kind: monaco.languages.CompletionItemKind.Function,
+						insertText: func,
+						range,
+						detail: 'Constraint/Function',
 					}))
 
 					const tableSuggestions = Object.keys(schemaRef.current).map(
@@ -242,11 +390,12 @@ export default function SqlEditor() {
 						qualifierBeforeCursor ?
 							activeTableContexts.filter(
 								(tableContext) =>
-									tableContext.qualifier === qualifierBeforeCursor ||
-									tableContext.tableName === qualifierBeforeCursor,
+									tableContext.qualifier ===
+										qualifierBeforeCursor ||
+									tableContext.tableName ===
+										qualifierBeforeCursor,
 							)
-						: activeTableContexts.length > 0 ?
-							activeTableContexts
+						: activeTableContexts.length > 0 ? activeTableContexts
 						: Object.keys(schemaRef.current).map((tableName) => ({
 								tableName,
 								qualifier: tableName,
@@ -257,28 +406,39 @@ export default function SqlEditor() {
 
 					const columnSuggestions = scopedTableContexts.flatMap(
 						({ tableName, qualifier }) =>
-							(schemaRef.current[tableName] ?? []).map((columnName) => ({
-								label:
-									qualifierBeforeCursor || !shouldQualifyColumns ?
-										columnName
-									:	`${qualifier}.${columnName}`,
-								kind: monaco.languages.CompletionItemKind.Field,
-								insertText:
-									qualifierBeforeCursor || !shouldQualifyColumns ?
-										columnName
-									:	`${qualifier}.${columnName}`,
-								range,
-								detail: tableName,
-							})),
+							(schemaRef.current[tableName] ?? []).map(
+								(columnName) => ({
+									label:
+										(
+											qualifierBeforeCursor ||
+											!shouldQualifyColumns
+										) ?
+											columnName
+										:	`${qualifier}.${columnName}`,
+									kind: monaco.languages.CompletionItemKind
+										.Field,
+									insertText:
+										(
+											qualifierBeforeCursor ||
+											!shouldQualifyColumns
+										) ?
+											columnName
+										:	`${qualifier}.${columnName}`,
+									range,
+									detail: tableName,
+								}),
+							),
 					)
 
 					const snippetSuggestions = [
 						{
 							label: 'SELECT * FROM',
 							kind: monaco.languages.CompletionItemKind.Snippet,
-							insertText: 'SELECT *\nFROM ${1:table_name}\nWHERE ${2:condition};',
+							insertText:
+								'SELECT *\nFROM ${1:table_name}\nWHERE ${2:condition};',
 							insertTextRules:
-								monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+								monaco.languages.CompletionItemInsertTextRule
+									.InsertAsSnippet,
 							range,
 							detail: 'Snippet',
 						},
@@ -288,7 +448,8 @@ export default function SqlEditor() {
 							insertText:
 								'INSERT INTO ${1:table_name} (${2:column_name})\nVALUES (${3:value});',
 							insertTextRules:
-								monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+								monaco.languages.CompletionItemInsertTextRule
+									.InsertAsSnippet,
 							range,
 							detail: 'Snippet',
 						},
@@ -298,7 +459,8 @@ export default function SqlEditor() {
 							insertText:
 								'UPDATE ${1:table_name}\nSET ${2:column_name} = ${3:value}\nWHERE ${4:condition};',
 							insertTextRules:
-								monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+								monaco.languages.CompletionItemInsertTextRule
+									.InsertAsSnippet,
 							range,
 							detail: 'Snippet',
 						},
@@ -308,14 +470,15 @@ export default function SqlEditor() {
 						suggestions: [
 							...snippetSuggestions,
 							...keywordSuggestions,
+							...dataTypeSuggestions,
+							...functionSuggestions,
 							...(isTypingTableName ? tableSuggestions : []),
 							...columnSuggestions,
 							...(!isTypingTableName ? tableSuggestions : []),
 						],
 					}
 				},
-			},
-		)
+			})
 	}
 
 	const handleMount: OnMount = (editor, monaco) => {

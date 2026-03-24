@@ -2,9 +2,7 @@ use crate::db_client::DbClient;
 use crate::state::AppState;
 
 #[tauri::command]
-pub async fn reset_connection_sessions(
-    state: tauri::State<'_, AppState>,
-) -> Result<(), String> {
+pub async fn reset_connection_sessions(state: tauri::State<'_, AppState>) -> Result<(), String> {
     let clients = {
         let mut connections_map = state.active_connections.lock().await;
         let mut clients = connections_map
