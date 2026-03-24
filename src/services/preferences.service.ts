@@ -1,4 +1,13 @@
 import type { Store } from '@tauri-apps/plugin-store'
+import {
+	DEFAULT_KEYBINDINGS,
+	isShortcutActionId,
+	type AppKeybindings,
+} from '@/lib/keybindings'
+import {
+	APP_MONACO_THEMES,
+	type AppMonacoTheme,
+} from '@/lib/monaco-theme'
 
 export const APP_THEMES = ['light', 'dark'] as const
 export const APP_LANGUAGES = ['en', 'vi'] as const
@@ -32,6 +41,8 @@ export type AppTheme = (typeof APP_THEMES)[number]
 export type AppLanguage = (typeof APP_LANGUAGES)[number]
 export type AppFontFamily = (typeof APP_FONT_FAMILIES)[number]
 export type AppMonoFontFamily = (typeof APP_MONO_FONT_FAMILIES)[number]
+export type { AppMonacoTheme }
+export type { AppKeybindings }
 
 export interface UploadedFontPreference {
 	fileName: string
@@ -43,6 +54,8 @@ export interface AppPreferences {
 	theme: AppTheme
 	language: AppLanguage
 	fontSize: number
+	monacoTheme: AppMonacoTheme
+	keybindings: AppKeybindings
 	fontFamily: AppFontFamily
 	monoFontFamily: AppMonoFontFamily
 	uploadedFont: UploadedFontPreference | null
@@ -53,6 +66,8 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
 	theme: 'light',
 	language: 'en',
 	fontSize: FONT_SIZE_DEFAULT,
+	monacoTheme: 'hndb-one-dark',
+	keybindings: DEFAULT_KEYBINDINGS,
 	fontFamily: DEFAULT_SANS_FONT_FAMILY,
 	monoFontFamily: DEFAULT_MONO_FONT_FAMILY,
 	uploadedFont: null,
@@ -116,6 +131,10 @@ const isAppFontFamily = (value: unknown): value is AppFontFamily =>
 const isAppMonoFontFamily = (value: unknown): value is AppMonoFontFamily =>
 	typeof value === 'string' &&
 	APP_MONO_FONT_FAMILIES.includes(value as AppMonoFontFamily)
+
+const isAppMonacoTheme = (value: unknown): value is AppMonacoTheme =>
+	typeof value === 'string' &&
+	APP_MONACO_THEMES.includes(value as AppMonacoTheme)
 
 const normalizeFontFamily = (value: unknown): AppFontFamily | null => {
 	if (value === 'humanist') return 'manrope'
@@ -181,6 +200,21 @@ const sanitizeUploadedFont = (value: unknown): UploadedFontPreference | null => 
 	return { fileName, mimeType, dataUrl }
 }
 
+const sanitizeKeybindings = (value: unknown): AppKeybindings => {
+	const nextKeybindings = { ...DEFAULT_KEYBINDINGS }
+	if (!value || typeof value !== 'object' || Array.isArray(value)) {
+		return nextKeybindings
+	}
+
+	for (const [key, shortcut] of Object.entries(value)) {
+		if (!isShortcutActionId(key)) continue
+		if (typeof shortcut !== 'string' || !shortcut.trim()) continue
+		nextKeybindings[key] = shortcut.trim()
+	}
+
+	return nextKeybindings
+}
+
 const sanitizePreferences = (
 	input: Partial<AppPreferences>,
 ): AppPreferences => {
@@ -199,6 +233,11 @@ const sanitizePreferences = (
 				input.language
 			:	DEFAULT_PREFERENCES.language,
 		fontSize: sanitizeFontSize(input.fontSize),
+		monacoTheme:
+			isAppMonacoTheme(input.monacoTheme) ?
+				input.monacoTheme
+			:	DEFAULT_PREFERENCES.monacoTheme,
+		keybindings: sanitizeKeybindings(input.keybindings),
 		fontFamily:
 			nextFontFamily === 'uploaded' && !nextUploadedFont ?
 				DEFAULT_PREFERENCES.fontFamily
@@ -263,6 +302,8 @@ export const loadPreferences = async (): Promise<AppPreferences> => {
 			theme,
 			language,
 			fontSize,
+			monacoTheme,
+			keybindings,
 			fontFamily,
 			monoFontFamily,
 			uploadedFont,
@@ -271,6 +312,8 @@ export const loadPreferences = async (): Promise<AppPreferences> => {
 			store.get<AppTheme>('theme'),
 			store.get<AppLanguage>('language'),
 			store.get<number>('fontSize'),
+			store.get<AppMonacoTheme>('monacoTheme'),
+			store.get<AppKeybindings>('keybindings'),
 			store.get<AppFontFamily>('fontFamily'),
 			store.get<AppMonoFontFamily>('monoFontFamily'),
 			store.get<UploadedFontPreference | null>('uploadedFont'),
@@ -280,6 +323,8 @@ export const loadPreferences = async (): Promise<AppPreferences> => {
 			theme,
 			language,
 			fontSize,
+			monacoTheme,
+			keybindings,
 			fontFamily,
 			monoFontFamily,
 			uploadedFont,
@@ -299,6 +344,8 @@ export const savePreferences = async (
 			store.set('theme', preferences.theme),
 			store.set('language', preferences.language),
 			store.set('fontSize', preferences.fontSize),
+			store.set('monacoTheme', preferences.monacoTheme),
+			store.set('keybindings', preferences.keybindings),
 			store.set('fontFamily', preferences.fontFamily),
 			store.set('monoFontFamily', preferences.monoFontFamily),
 			store.set('uploadedFont', preferences.uploadedFont),

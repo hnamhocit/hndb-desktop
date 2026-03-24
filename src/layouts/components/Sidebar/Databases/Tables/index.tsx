@@ -2,10 +2,12 @@ import clsx from 'clsx'
 import { CornerDownLeftIcon, Table2Icon } from 'lucide-react'
 import { useNavigate } from 'react-router'
 
+import { Skeleton } from '@/components/ui/skeleton'
 import { useActiveTab, useI18n, useTables } from '@/hooks'
 import { ITab } from '@/interfaces'
 import {
 	useActiveStore,
+	useConnectionStore,
 	useTabsStore,
 } from '@/stores'
 
@@ -14,10 +16,15 @@ interface TablesProps {
 	database: string
 }
 
+const tableSkeletonWidths = ['w-24', 'w-32', 'w-28', 'w-36', 'w-20']
+
 const Tables = ({ dataSourceId, database }: TablesProps) => {
 	const navigate = useNavigate()
 	const { t } = useI18n()
 	const activeTab = useActiveTab()
+	const connectionStatus = useConnectionStore(
+		(state) => state.statuses[dataSourceId],
+	)
 	const {
 		setConnectionId,
 		setDatabase,
@@ -69,13 +76,28 @@ const Tables = ({ dataSourceId, database }: TablesProps) => {
 
 	if (isLoading) {
 		return (
-			<div className='px-3 py-3 text-center font-mono text-xs text-muted-foreground'>
-				{t('sidebar.loadingTables')}
+			<div className='flex flex-col gap-1 pt-1'>
+				{tableSkeletonWidths.map((width, index) => (
+					<div
+						key={`${width}-${index}`}
+						className='flex items-center gap-3 rounded-md px-3 py-2'>
+						<Skeleton className='h-[15px] w-[15px] shrink-0 rounded-sm' />
+						<Skeleton className={`h-4 ${width}`} />
+					</div>
+				))}
 			</div>
 		)
 	}
 
 	if (tables.length === 0) {
+		if (connectionStatus === false) {
+			return (
+				<div className='px-3 py-3 text-center font-mono text-xs text-muted-foreground'>
+					{t('sidebar.connectToLoadTables')}
+				</div>
+			)
+		}
+
 		return (
 			<div className='px-3 py-3 text-center font-mono text-xs text-muted-foreground'>
 				{t('sidebar.noTablesFound')}

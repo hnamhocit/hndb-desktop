@@ -1,6 +1,6 @@
-use crate::db_client::DbClient;
 use crate::helpers::{
-    build_conn_str, check_and_disconnect_if_fatal, ensure_connection_is_connected, get_config_by_id, override_database,
+    check_and_disconnect_if_fatal, ensure_connection_is_connected,
+    get_or_create_database_connection,
 };
 use crate::state::AppState;
 
@@ -13,10 +13,7 @@ pub async fn list_tables(
 ) -> Result<Vec<String>, String> {
     ensure_connection_is_connected(&id, &state).await?;
 
-    let config = get_config_by_id(&app, id.as_str())?;
-    let effective_config = override_database(&config, Some(database.as_str()))?;
-    let conn_str = build_conn_str(&effective_config)?;
-    let client = match DbClient::connect(&effective_config.driver, &conn_str).await {
+    let client = match get_or_create_database_connection(id.as_str(), database.as_str(), &app, &state).await {
         Ok(c) => c,
         Err(e) => {
             check_and_disconnect_if_fatal(&id, &state, &e).await;
@@ -25,7 +22,6 @@ pub async fn list_tables(
     };
 
     let result = client.list_tables().await;
-    client.close().await;
 
     if let Err(ref err) = result {
         check_and_disconnect_if_fatal(&id, &state, err).await;

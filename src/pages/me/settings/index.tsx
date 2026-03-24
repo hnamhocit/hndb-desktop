@@ -2,6 +2,7 @@
 
 import {
 	ArrowLeftIcon,
+	CommandIcon,
 	DownloadIcon,
 	FlameIcon,
 	MoonIcon,
@@ -13,12 +14,25 @@ import {
 } from 'lucide-react'
 import Editor, { type Monaco } from '@monaco-editor/react'
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 
 import { useI18n } from '@/hooks'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+	APP_SHORTCUT_ACTIONS,
+	DEFAULT_KEYBINDINGS,
+	formatShortcutForDisplay,
+	isModifierOnlyKey,
+	keyboardEventToShortcut,
+	type ShortcutActionId,
+} from '@/lib/keybindings'
+import {
+	APP_MONACO_THEMES,
+	registerAppMonacoThemes,
+	type AppMonacoTheme,
+} from '@/lib/monaco-theme'
 import {
 	APP_FONT_FAMILIES,
 	APP_LANGUAGES,
@@ -46,6 +60,16 @@ const SUPPORTED_FONT_EXTENSIONS = ['ttf', 'otf', 'woff', 'woff2'] as const
 const FONT_INPUT_ACCEPT = '.ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2'
 const SETTINGS_JSON_MODEL_URI = 'inmemory://model/hndb-preferences.json'
 const SETTINGS_JSON_SCHEMA_URI = 'inmemory://schema/hndb-preferences.schema.json'
+const MONACO_THEME_PREVIEW = `SELECT
+  d.department_name,
+  COUNT(*) AS total_employees,
+  AVG(e.birth_year) AS avg_birth_year
+FROM employees e
+JOIN departments d
+  ON d.id = e.dept_id
+WHERE e.email IS NOT NULL
+GROUP BY d.department_name
+ORDER BY total_employees DESC;`
 const SETTINGS_JSON_SCHEMA = {
 	type: 'object',
 	additionalProperties: false,
@@ -53,6 +77,8 @@ const SETTINGS_JSON_SCHEMA = {
 		'theme',
 		'language',
 		'fontSize',
+		'monacoTheme',
+		'keybindings',
 		'fontFamily',
 		'monoFontFamily',
 		'uploadedFont',
@@ -71,6 +97,23 @@ const SETTINGS_JSON_SCHEMA = {
 			type: 'integer',
 			minimum: FONT_SIZE_MIN,
 			maximum: FONT_SIZE_MAX,
+		},
+		monacoTheme: {
+			type: 'string',
+			enum: APP_MONACO_THEMES,
+		},
+		keybindings: {
+			type: 'object',
+			additionalProperties: false,
+			required: APP_SHORTCUT_ACTIONS,
+			properties: {
+				runQuery: { type: 'string' },
+				newQuery: { type: 'string' },
+				quickSearch: { type: 'string' },
+				openSettingsJson: { type: 'string' },
+				previousTab: { type: 'string' },
+				nextTab: { type: 'string' },
+			},
 		},
 		fontFamily: {
 			type: 'string',
@@ -140,6 +183,7 @@ const readFileAsDataUrl = async (file: File): Promise<string> =>
 	})
 
 const configurePreferencesJsonSchema = (monaco: Monaco) => {
+	registerAppMonacoThemes(monaco)
 	monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
 		validate: true,
 		enableSchemaRequest: false,
@@ -155,7 +199,8 @@ const configurePreferencesJsonSchema = (monaco: Monaco) => {
 }
 
 export default function MeSettingsPage() {
-	type SettingsTabValue = 'profile' | 'preferences' | 'config'
+	type SettingsTabValue = 'profile' | 'preferences' | 'shortcuts' | 'config'
+	const [searchParams, setSearchParams] = useSearchParams()
 	const { user } = useUserStore()
 	const theme = usePreferencesStore((state) => state.theme)
 	const toggleTheme = usePreferencesStore((state) => state.toggleTheme)
@@ -163,6 +208,11 @@ export default function MeSettingsPage() {
 	const setLanguage = usePreferencesStore((state) => state.setLanguage)
 	const fontSize = usePreferencesStore((state) => state.fontSize)
 	const setFontSize = usePreferencesStore((state) => state.setFontSize)
+	const monacoTheme = usePreferencesStore((state) => state.monacoTheme)
+	const setMonacoTheme = usePreferencesStore((state) => state.setMonacoTheme)
+	const keybindings = usePreferencesStore((state) => state.keybindings)
+	const setKeybinding = usePreferencesStore((state) => state.setKeybinding)
+	const resetKeybindings = usePreferencesStore((state) => state.resetKeybindings)
 	const fontFamily = usePreferencesStore((state) => state.fontFamily)
 	const setFontFamily = usePreferencesStore((state) => state.setFontFamily)
 	const monoFontFamily = usePreferencesStore((state) => state.monoFontFamily)
@@ -186,6 +236,8 @@ export default function MeSettingsPage() {
 	const [preferencesJsonError, setPreferencesJsonError] = useState<string | null>(
 		null,
 	)
+	const [capturingShortcutAction, setCapturingShortcutAction] =
+		useState<ShortcutActionId | null>(null)
 	const isDarkMode = theme === 'dark'
 	const maxUploadSizeMb = Math.round(MAX_UPLOAD_FONT_BYTES / (1024 * 1024))
 	const currentPreferences = useMemo<AppPreferences>(
@@ -193,6 +245,8 @@ export default function MeSettingsPage() {
 			theme,
 			language,
 			fontSize,
+			monacoTheme,
+			keybindings,
 			fontFamily,
 			monoFontFamily,
 			uploadedFont,
@@ -202,6 +256,8 @@ export default function MeSettingsPage() {
 			theme,
 			language,
 			fontSize,
+			monacoTheme,
+			keybindings,
 			fontFamily,
 			monoFontFamily,
 			uploadedFont,
@@ -216,6 +272,18 @@ export default function MeSettingsPage() {
 		currentPreferencesJson,
 	)
 	const [settingsTab, setSettingsTab] = useState<SettingsTabValue>('profile')
+
+	useEffect(() => {
+		const requestedTab = searchParams.get('tab')
+		if (
+			requestedTab === 'profile' ||
+			requestedTab === 'preferences' ||
+			requestedTab === 'shortcuts' ||
+			requestedTab === 'config'
+		) {
+			setSettingsTab(requestedTab)
+		}
+	}, [searchParams])
 
 	useEffect(() => {
 		setFontSizeInput(String(fontSize))
@@ -267,6 +335,137 @@ export default function MeSettingsPage() {
 		}
 		return options
 	}, [t, uploadedMonoFont])
+
+	const monacoThemeOptions = useMemo(
+		() =>
+			[
+				{
+					value: 'hndb-github-light',
+					label: t('settings.monacoThemeOption.githubLight'),
+				},
+				{
+					value: 'hndb-one-dark',
+					label: t('settings.monacoThemeOption.oneDark'),
+				},
+				{
+					value: 'hndb-tokyo-night',
+					label: t('settings.monacoThemeOption.tokyoNight'),
+				},
+				{
+					value: 'hndb-gruvbox-dark',
+					label: t('settings.monacoThemeOption.gruvboxDark'),
+				},
+				{
+					value: 'hndb-nord',
+					label: t('settings.monacoThemeOption.nord'),
+				},
+				{
+					value: 'hndb-catppuccin-mocha',
+					label: t('settings.monacoThemeOption.catppuccinMocha'),
+				},
+			] as Array<{ value: AppMonacoTheme; label: string }>,
+		[t],
+	)
+
+	const shortcutActionOptions = useMemo(
+		() =>
+			[
+				{
+					id: 'runQuery' as ShortcutActionId,
+					label: t('settings.shortcuts.runQuery'),
+					description: t('settings.shortcuts.runQueryDescription'),
+				},
+				{
+					id: 'newQuery' as ShortcutActionId,
+					label: t('settings.shortcuts.newQuery'),
+					description: t('settings.shortcuts.newQueryDescription'),
+				},
+				{
+					id: 'quickSearch' as ShortcutActionId,
+					label: t('settings.shortcuts.quickSearch'),
+					description: t('settings.shortcuts.quickSearchDescription'),
+				},
+				{
+					id: 'openSettingsJson' as ShortcutActionId,
+					label: t('settings.shortcuts.openSettingsJson'),
+					description: t(
+						'settings.shortcuts.openSettingsJsonDescription',
+					),
+				},
+				{
+					id: 'previousTab' as ShortcutActionId,
+					label: t('settings.shortcuts.previousTab'),
+					description: t('settings.shortcuts.previousTabDescription'),
+				},
+				{
+					id: 'nextTab' as ShortcutActionId,
+					label: t('settings.shortcuts.nextTab'),
+					description: t('settings.shortcuts.nextTabDescription'),
+				},
+			],
+		[t],
+	)
+
+	useEffect(() => {
+		if (!capturingShortcutAction) return
+
+		const handleShortcutCapture = (event: KeyboardEvent) => {
+			if (event.isComposing) return
+
+			if (event.key === 'Escape') {
+				event.preventDefault()
+				event.stopPropagation()
+				setCapturingShortcutAction(null)
+				return
+			}
+
+			if (isModifierOnlyKey(event.key)) {
+				event.preventDefault()
+				event.stopPropagation()
+				return
+			}
+
+			const nextShortcut = keyboardEventToShortcut(event)
+			if (!nextShortcut) return
+
+			event.preventDefault()
+			event.stopPropagation()
+
+			const conflictingAction = shortcutActionOptions.find(
+				(option) =>
+					option.id !== capturingShortcutAction &&
+					keybindings[option.id] === nextShortcut,
+			)
+
+			if (conflictingAction) {
+				toast.error(
+					t('settings.shortcuts.conflict', {
+						action: conflictingAction.label,
+					}),
+				)
+				setCapturingShortcutAction(null)
+				return
+			}
+
+			void setKeybinding(capturingShortcutAction, nextShortcut)
+			toast.success(
+				t('settings.shortcuts.updated', {
+					shortcut: formatShortcutForDisplay(nextShortcut),
+				}),
+			)
+			setCapturingShortcutAction(null)
+		}
+
+		window.addEventListener('keydown', handleShortcutCapture, true)
+		return () =>
+			window.removeEventListener('keydown', handleShortcutCapture, true)
+	}, [
+		capturingShortcutAction,
+		keybindings,
+		setKeybinding,
+		shortcutActionOptions,
+		t,
+	])
 
 	const handleSaveSettings = () => {
 		toast.info(t('settings.toastSavePending'))
@@ -431,9 +630,16 @@ export default function MeSettingsPage() {
 
 				<Tabs
 					value={settingsTab}
-					onValueChange={(value) =>
-						setSettingsTab(value as SettingsTabValue)
-					}
+					onValueChange={(value) => {
+						const nextTab = value as SettingsTabValue
+						setSettingsTab(nextTab)
+
+						const nextSearchParams = new URLSearchParams(searchParams)
+						nextSearchParams.set('tab', nextTab)
+						setSearchParams(nextSearchParams, {
+							replace: true,
+						})
+					}}
 					className='space-y-4'>
 					<TabsList className='w-full sm:w-fit'>
 						<TabsTrigger
@@ -445,6 +651,11 @@ export default function MeSettingsPage() {
 							value='preferences'
 							className='flex-1 sm:flex-none'>
 							{t('settings.preferences')}
+						</TabsTrigger>
+						<TabsTrigger
+							value='shortcuts'
+							className='flex-1 sm:flex-none'>
+							{t('settings.shortcuts.tab')}
 						</TabsTrigger>
 						<TabsTrigger
 							value='config'
@@ -664,6 +875,57 @@ export default function MeSettingsPage() {
 
 							<div className='rounded-md border p-3 space-y-3'>
 								<div className='text-sm font-medium'>
+									{t('settings.monacoTheme')}
+								</div>
+								<div className='text-xs text-muted-foreground'>
+									{t('settings.monacoThemeHint')}
+								</div>
+								<Select
+									value={monacoTheme}
+									onValueChange={(value) =>
+										void setMonacoTheme(value as AppMonacoTheme)
+									}>
+									<SelectTrigger className='w-full md:max-w-sm'>
+										<SelectValue
+											placeholder={t('settings.selectMonacoTheme')}
+										/>
+									</SelectTrigger>
+									<SelectContent>
+										{monacoThemeOptions.map((option) => (
+											<SelectItem
+												key={option.value}
+												value={option.value}>
+												{option.label}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+
+								<div className='overflow-hidden rounded-md border'>
+									<Editor
+										height='220px'
+										beforeMount={registerAppMonacoThemes}
+										defaultLanguage='sql'
+										language='sql'
+										theme={monacoTheme}
+										value={MONACO_THEME_PREVIEW}
+										options={{
+											readOnly: true,
+											automaticLayout: true,
+											minimap: { enabled: false },
+											fontSize,
+											fontFamily: 'var(--app-mono-font-family)',
+											fontLigatures: true,
+											scrollBeyondLastLine: false,
+											wordWrap: 'on',
+											padding: { top: 12, bottom: 12 },
+										}}
+									/>
+								</div>
+							</div>
+
+							<div className='rounded-md border p-3 space-y-3'>
+								<div className='text-sm font-medium'>
 									{t('settings.normalFont')}
 								</div>
 								<Select
@@ -793,6 +1055,123 @@ export default function MeSettingsPage() {
 					</TabsContent>
 
 					<TabsContent
+						value='shortcuts'
+						className='space-y-4'>
+						<div className='space-y-4'>
+							<div className='rounded-xl border bg-card/70 p-4 sm:p-5'>
+								<div className='flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between'>
+									<div className='space-y-2'>
+										<div className='flex items-center gap-2 text-sm font-semibold'>
+											<CommandIcon size={16} />
+											{t('settings.shortcuts.title')}
+										</div>
+										<div className='max-w-2xl text-sm text-muted-foreground'>
+											{t('settings.shortcuts.hint')}
+										</div>
+										<div className='flex flex-wrap items-center gap-2 pt-1'>
+											<div className='rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground'>
+												{shortcutActionOptions.length} actions
+											</div>
+											{capturingShortcutAction && (
+												<div className='rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary'>
+													{t('settings.shortcuts.listening')}
+												</div>
+											)}
+										</div>
+									</div>
+
+									<Button
+										size='sm'
+										variant='outline'
+										onClick={() => {
+											setCapturingShortcutAction(null)
+											void resetKeybindings()
+										}}>
+										{t('settings.shortcuts.resetAll')}
+									</Button>
+								</div>
+							</div>
+
+							<div className='grid gap-3'>
+								{shortcutActionOptions.map((shortcutAction) => {
+									const isCapturing =
+										capturingShortcutAction === shortcutAction.id
+									const currentShortcut = keybindings[shortcutAction.id]
+
+									return (
+										<div
+											key={shortcutAction.id}
+											className={`rounded-xl border p-4 transition-colors ${
+												isCapturing ?
+													'border-primary/40 bg-primary/5 shadow-sm'
+												:	'bg-card/60'
+											}`}>
+											<div className='flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between'>
+												<div className='space-y-1.5'>
+													<div className='text-sm font-semibold'>
+														{shortcutAction.label}
+													</div>
+													<div className='text-xs leading-6 text-muted-foreground'>
+														{shortcutAction.description}
+													</div>
+												</div>
+
+												<div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end'>
+													<div className='min-w-[140px] rounded-lg border bg-background px-3 py-2 text-center font-mono text-xs shadow-xs'>
+														{formatShortcutForDisplay(
+															currentShortcut,
+														)}
+													</div>
+
+													<div className='flex items-center gap-2'>
+														<Button
+															size='sm'
+															variant={
+																isCapturing ?
+																	'default'
+																:	'outline'
+															}
+															onClick={() =>
+																setCapturingShortcutAction(
+																	isCapturing ? null : shortcutAction.id,
+																)
+															}>
+															{isCapturing ?
+																t(
+																	'settings.shortcuts.listening',
+																)
+															:	t('settings.shortcuts.change')}
+														</Button>
+														<Button
+															size='sm'
+															variant='ghost'
+															onClick={() =>
+																void setKeybinding(
+																	shortcutAction.id,
+																	DEFAULT_KEYBINDINGS[
+																		shortcutAction.id
+																	],
+																)
+															}>
+															{t('settings.shortcuts.reset')}
+														</Button>
+													</div>
+												</div>
+											</div>
+
+											{isCapturing && (
+												<div className='mt-3 rounded-lg border border-primary/20 bg-background/80 px-3 py-2 text-xs text-muted-foreground'>
+													{t('settings.shortcuts.listeningHint')}
+												</div>
+											)}
+										</div>
+									)
+								})}
+							</div>
+						</div>
+					</TabsContent>
+
+					<TabsContent
 						value='config'
 						className='space-y-4'>
 						<div className='rounded-md border p-4 space-y-3'>
@@ -845,7 +1224,7 @@ export default function MeSettingsPage() {
 										beforeMount={configurePreferencesJsonSchema}
 										defaultLanguage='json'
 										language='json'
-										theme={isDarkMode ? 'vs-dark' : 'vs'}
+										theme={monacoTheme}
 										value={preferencesJsonDraft}
 										onChange={(value) =>
 											setPreferencesJsonDraft(value || '')

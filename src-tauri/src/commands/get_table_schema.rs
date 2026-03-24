@@ -1,6 +1,7 @@
 use crate::db_client::DbClient;
 use crate::helpers::{
-    build_conn_str, check_and_disconnect_if_fatal, ensure_connection_is_connected, get_config_by_id, override_database,
+    check_and_disconnect_if_fatal, ensure_connection_is_connected,
+    get_config_by_id, get_or_create_database_connection,
 };
 use crate::state::AppState;
 use crate::types::TableColumn;
@@ -390,9 +391,7 @@ pub async fn get_table_schema(
     ensure_connection_is_connected(&id, &state).await?;
 
     let config = get_config_by_id(&app, id.as_str())?;
-    let effective_config = override_database(&config, Some(database.as_str()))?;
-    let conn_str = build_conn_str(&effective_config)?;
-    let client = match DbClient::connect(&effective_config.driver, &conn_str).await {
+    let client = match get_or_create_database_connection(id.as_str(), database.as_str(), &app, &state).await {
         Ok(c) => c,
         Err(e) => {
             check_and_disconnect_if_fatal(&id, &state, &e).await;
@@ -400,7 +399,7 @@ pub async fn get_table_schema(
         }
     };
 
-    let schema_result = match effective_config.driver.as_str() {
+    let schema_result = match config.driver.as_str() {
         "postgres" => {
             match client.run_sql(build_postgres_schema_query()).await {
                 Ok(raw) => Ok(rows_to_schema(parse_json_rows(&raw)?)),
@@ -421,15 +420,12 @@ pub async fn get_table_schema(
         }
         "sqlite" => fetch_sqlite_schema(&client, &database).await,
         driver => {
-            client.close().await;
             return Err(format!(
                 "Schema inspection is not supported for driver: {}",
                 driver
             ));
         }
     };
-
-    client.close().await;
 
     match schema_result {
         Ok(schema) => Ok(schema),

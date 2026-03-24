@@ -7,10 +7,21 @@ pub async fn reset_connection_sessions(
 ) -> Result<(), String> {
     let clients = {
         let mut connections_map = state.active_connections.lock().await;
-        connections_map
+        let mut clients = connections_map
             .drain()
             .map(|(_, client)| client)
-            .collect::<Vec<DbClient>>()
+            .collect::<Vec<DbClient>>();
+        drop(connections_map);
+
+        let mut database_connections_map = state.active_database_connections.lock().await;
+        clients.extend(
+            database_connections_map
+                .drain()
+                .map(|(_, client)| client)
+                .collect::<Vec<DbClient>>(),
+        );
+
+        clients
     };
 
     for client in clients {

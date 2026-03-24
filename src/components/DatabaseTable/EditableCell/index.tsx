@@ -4,6 +4,7 @@ import { AlertCircle, Check, LockIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { registerAppMonacoThemes } from '@/lib/monaco-theme'
 import {
 	Select,
 	SelectContent,
@@ -12,6 +13,7 @@ import {
 	SelectValue,
 } from '@/components/ui/select'
 import { IColumn } from '@/interfaces'
+import { usePreferencesStore } from '@/stores'
 import { getSafeDisplayValue, getTypeInfo } from '@/utils'
 
 interface EditableCellProps {
@@ -82,6 +84,7 @@ const EditableCell = ({
 				.join('')
 				.split(',')
 		:	[]
+	const monacoTheme = usePreferencesStore((state) => state.monacoTheme)
 
 	useEffect(() => {
 		if (
@@ -438,8 +441,9 @@ const EditableCell = ({
 						<div className='flex-1'>
 							<Editor
 								height='100%'
+								beforeMount={registerAppMonacoThemes}
 								defaultLanguage='json'
-								theme='vs-dark'
+								theme={monacoTheme}
 								value={localValue}
 								onChange={(v) => setLocalValue(v || '')}
 								options={{

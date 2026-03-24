@@ -59,7 +59,10 @@ export const messages = {
 	'auth.emailPlaceholder': { en: 'name@example.com', vi: 'ten@example.com' },
 	'auth.namePlaceholder': { en: 'John Doe', vi: 'Nguyễn Văn A' },
 	'auth.passwordPlaceholder': { en: '••••••••', vi: '••••••••' },
-	'auth.loginFailed': { en: 'Login failed: {{message}}', vi: 'Đăng nhập thất bại: {{message}}' },
+	'auth.loginFailed': {
+		en: 'Login failed: {{message}}',
+		vi: 'Đăng nhập thất bại: {{message}}',
+	},
 	'auth.loginUnexpectedError': {
 		en: 'An unexpected error occurred during login.',
 		vi: 'Đã xảy ra lỗi không mong muốn khi đăng nhập.',
@@ -115,7 +118,10 @@ export const messages = {
 		en: 'Your display name',
 		vi: 'Tên hiển thị của bạn',
 	},
-	'settings.emailPlaceholder': { en: 'you@example.com', vi: 'ban@example.com' },
+	'settings.emailPlaceholder': {
+		en: 'you@example.com',
+		vi: 'ban@example.com',
+	},
 	'settings.saveAccountChanges': {
 		en: 'Save account changes',
 		vi: 'Lưu thay đổi tài khoản',
@@ -142,10 +148,113 @@ export const messages = {
 		en: 'Invalid font size. Please enter a number.',
 		vi: 'Cỡ chữ không hợp lệ. Vui lòng nhập số.',
 	},
+	'settings.monacoTheme': {
+		en: 'Editor theme',
+		vi: 'Theme editor',
+	},
+	'settings.monacoThemeHint': {
+		en: 'Choose one Monaco theme for SQL editor, query plan, and JSON editors across the app.',
+		vi: 'Chọn một theme Monaco dùng chung cho SQL editor, kế hoạch truy vấn và các JSON editor trong toàn app.',
+	},
+	'settings.selectMonacoTheme': {
+		en: 'Select an editor theme',
+		vi: 'Chọn theme editor',
+	},
+	'settings.shortcuts.tab': {
+		en: 'Shortcuts',
+		vi: 'Phím tắt',
+	},
+	'settings.shortcuts.title': {
+		en: 'Keyboard shortcuts',
+		vi: 'Phím tắt bàn phím',
+	},
+	'settings.shortcuts.hint': {
+		en: 'Click Change, press a shortcut, and it will be saved instantly.',
+		vi: 'Bấm Change, gõ tổ hợp phím, app sẽ lưu ngay lập tức.',
+	},
+	'settings.shortcuts.change': {
+		en: 'Change',
+		vi: 'Đổi',
+	},
+	'settings.shortcuts.reset': {
+		en: 'Reset',
+		vi: 'Đặt lại',
+	},
+	'settings.shortcuts.resetAll': {
+		en: 'Reset all',
+		vi: 'Đặt lại tất cả',
+	},
+	'settings.shortcuts.listening': {
+		en: 'Listening...',
+		vi: 'Đang nghe...',
+	},
+	'settings.shortcuts.listeningHint': {
+		en: 'Press the new shortcut now. Press Esc to cancel.',
+		vi: 'Hãy bấm tổ hợp phím mới ngay bây giờ. Bấm Esc để hủy.',
+	},
+	'settings.shortcuts.updated': {
+		en: 'Shortcut updated: {{shortcut}}',
+		vi: 'Đã cập nhật phím tắt: {{shortcut}}',
+	},
+	'settings.shortcuts.conflict': {
+		en: 'This shortcut is already used by {{action}}.',
+		vi: 'Phím tắt này đã được dùng cho {{action}}.',
+	},
+	'settings.shortcuts.runQuery': {
+		en: 'Run query',
+		vi: 'Chạy truy vấn',
+	},
+	'settings.shortcuts.runQueryDescription': {
+		en: 'Execute the current SQL query in the active query tab.',
+		vi: 'Thực thi câu SQL hiện tại trong tab truy vấn đang mở.',
+	},
+	'settings.shortcuts.newQuery': {
+		en: 'New query tab',
+		vi: 'Tab truy vấn mới',
+	},
+	'settings.shortcuts.newQueryDescription': {
+		en: 'Create a new query tab.',
+		vi: 'Tạo một tab truy vấn mới.',
+	},
+	'settings.shortcuts.quickSearch': {
+		en: 'Quick search',
+		vi: 'Tìm nhanh',
+	},
+	'settings.shortcuts.quickSearchDescription': {
+		en: 'Focus the global data source search input.',
+		vi: 'Focus vào ô tìm kiếm nguồn dữ liệu toàn cục.',
+	},
+	'settings.shortcuts.openSettingsJson': {
+		en: 'Open settings JSON',
+		vi: 'Mở settings JSON',
+	},
+	'settings.shortcuts.openSettingsJsonDescription': {
+		en: 'Jump directly to the Config JSON tab in settings.',
+		vi: 'Đi thẳng tới tab Config JSON trong settings.',
+	},
+	'settings.shortcuts.previousTab': {
+		en: 'Previous tab',
+		vi: 'Tab trước',
+	},
+	'settings.shortcuts.previousTabDescription': {
+		en: 'Switch to the previous workspace tab.',
+		vi: 'Chuyển sang tab làm việc trước đó.',
+	},
+	'settings.shortcuts.nextTab': {
+		en: 'Next tab',
+		vi: 'Tab tiếp theo',
+	},
+	'settings.shortcuts.nextTabDescription': {
+		en: 'Switch to the next workspace tab.',
+		vi: 'Chuyển sang tab làm việc tiếp theo.',
+	},
 	'settings.normalFont': { en: 'Normal font', vi: 'Font thường' },
 	'settings.monoFont': { en: 'Monospace font', vi: 'Font mono' },
 	'settings.selectFont': { en: 'Select a font', vi: 'Chọn font' },
-	'settings.selectMonoFont': { en: 'Select a mono font', vi: 'Chọn font mono' },
+	'settings.selectMonoFont': {
+		en: 'Select a mono font',
+		vi: 'Chọn font mono',
+	},
 	'settings.uploadFontFile': {
 		en: 'Upload normal font',
 		vi: 'Tải lên font thường',
@@ -318,8 +427,35 @@ export const messages = {
 		en: 'Uploaded: {{name}}',
 		vi: 'Đã tải lên: {{name}}',
 	},
+	'settings.monacoThemeOption.githubLight': {
+		en: 'GitHub Light',
+		vi: 'GitHub Light',
+	},
+	'settings.monacoThemeOption.oneDark': {
+		en: 'One Dark',
+		vi: 'One Dark',
+	},
+	'settings.monacoThemeOption.tokyoNight': {
+		en: 'Tokyo Night',
+		vi: 'Tokyo Night',
+	},
+	'settings.monacoThemeOption.gruvboxDark': {
+		en: 'Gruvbox Dark',
+		vi: 'Gruvbox Dark',
+	},
+	'settings.monacoThemeOption.nord': {
+		en: 'Nord',
+		vi: 'Nord',
+	},
+	'settings.monacoThemeOption.catppuccinMocha': {
+		en: 'Catppuccin Mocha',
+		vi: 'Catppuccin Mocha',
+	},
 	'settings.forgotPassword': { en: 'Forgot password', vi: 'Quên mật khẩu' },
-	'settings.sendResetLink': { en: 'Send reset link', vi: 'Gửi liên kết đặt lại' },
+	'settings.sendResetLink': {
+		en: 'Send reset link',
+		vi: 'Gửi liên kết đặt lại',
+	},
 	'settings.sendResetLinkHint': {
 		en: 'Send reset link to your email.',
 		vi: 'Gửi liên kết đặt lại qua email.',
@@ -364,7 +500,10 @@ export const messages = {
 	'home.actionSwitchTab': { en: 'Switch tab', vi: 'Chuyển tab' },
 	'home.actionRunQuery': { en: 'Run query', vi: 'Chạy truy vấn' },
 	'home.actionQuickSearch': { en: 'Quick search', vi: 'Tìm nhanh' },
-	'home.unknownTabType': { en: 'Unknown tab type', vi: 'Loại tab không xác định' },
+	'home.unknownTabType': {
+		en: 'Unknown tab type',
+		vi: 'Loại tab không xác định',
+	},
 
 	'header.searchDataSources': {
 		en: 'Search data sources...',
@@ -377,7 +516,10 @@ export const messages = {
 
 	'tabs.close': { en: 'Close', vi: 'Đóng' },
 	'tabs.closeOthers': { en: 'Close others', vi: 'Đóng các tab khác' },
-	'tabs.closeRight': { en: 'Close to the right', vi: 'Đóng các tab bên phải' },
+	'tabs.closeRight': {
+		en: 'Close to the right',
+		vi: 'Đóng các tab bên phải',
+	},
 	'tabs.closeLeft': { en: 'Close to the left', vi: 'Đóng các tab bên trái' },
 	'tabs.closeAll': { en: 'Close all', vi: 'Đóng tất cả' },
 	'tabs.newQueryTitle': { en: 'Query {{index}}', vi: 'Truy vấn {{index}}' },
@@ -390,18 +532,47 @@ export const messages = {
 		en: 'Loading databases...',
 		vi: 'Đang tải cơ sở dữ liệu...',
 	},
-	'sidebar.noDatabasesFound': { en: 'No databases found.', vi: 'Không tìm thấy cơ sở dữ liệu.' },
-	'sidebar.loadingTables': { en: 'Loading tables...', vi: 'Đang tải bảng...' },
-	'sidebar.noTablesFound': { en: 'No tables found.', vi: 'Không tìm thấy bảng.' },
-	'sidebar.connectionConnecting': { en: 'Connecting...', vi: 'Đang kết nối...' },
-	'sidebar.connectionActive': { en: 'Connection is active', vi: 'Kết nối đang hoạt động' },
+	'sidebar.connectToLoadDatabases': {
+		en: 'Connect this data source to load databases.',
+		vi: 'Hãy kết nối nguồn dữ liệu này để tải cơ sở dữ liệu.',
+	},
+	'sidebar.noDatabasesFound': {
+		en: 'No databases found.',
+		vi: 'Không tìm thấy cơ sở dữ liệu.',
+	},
+	'sidebar.loadingTables': {
+		en: 'Loading tables...',
+		vi: 'Đang tải bảng...',
+	},
+	'sidebar.connectToLoadTables': {
+		en: 'Connect this data source to load tables.',
+		vi: 'Hãy kết nối nguồn dữ liệu này để tải bảng.',
+	},
+	'sidebar.noTablesFound': {
+		en: 'No tables found.',
+		vi: 'Không tìm thấy bảng.',
+	},
+	'sidebar.connectionConnecting': {
+		en: 'Connecting...',
+		vi: 'Đang kết nối...',
+	},
+	'sidebar.connectionActive': {
+		en: 'Connection is active',
+		vi: 'Kết nối đang hoạt động',
+	},
 	'sidebar.connectionDisconnected': {
 		en: 'Connection is disconnected',
 		vi: 'Kết nối đã ngắt',
 	},
 
-	'connection.menu.createDatabase': { en: 'Create database', vi: 'Tạo cơ sở dữ liệu' },
-	'connection.menu.editConnection': { en: 'Edit connection', vi: 'Sửa kết nối' },
+	'connection.menu.createDatabase': {
+		en: 'Create database',
+		vi: 'Tạo cơ sở dữ liệu',
+	},
+	'connection.menu.editConnection': {
+		en: 'Edit connection',
+		vi: 'Sửa kết nối',
+	},
 	'connection.menu.invalidateReconnect': {
 		en: 'Invalidate/Reconnect',
 		vi: 'Vô hiệu hóa/Kết nối lại',
@@ -472,24 +643,42 @@ export const messages = {
 		vi: 'Chỉ cho phép chữ cái, số, dấu gạch dưới và $. Tên không được bắt đầu bằng số.',
 	},
 
-	'connection.dialog.createDatabase.title': { en: 'Create Database', vi: 'Tạo cơ sở dữ liệu' },
+	'connection.dialog.createDatabase.title': {
+		en: 'Create Database',
+		vi: 'Tạo cơ sở dữ liệu',
+	},
 	'connection.dialog.createDatabase.placeholder': {
 		en: 'Enter new database name',
 		vi: 'Nhập tên cơ sở dữ liệu mới',
 	},
-	'connection.dialog.createDatabase.creating': { en: 'Creating...', vi: 'Đang tạo...' },
-	'connection.dialog.renameDataSource.title': { en: 'Rename Data Source', vi: 'Đổi tên nguồn dữ liệu' },
+	'connection.dialog.createDatabase.creating': {
+		en: 'Creating...',
+		vi: 'Đang tạo...',
+	},
+	'connection.dialog.renameDataSource.title': {
+		en: 'Rename Data Source',
+		vi: 'Đổi tên nguồn dữ liệu',
+	},
 	'connection.dialog.renameDataSource.placeholder': {
 		en: 'Enter new data source name',
 		vi: 'Nhập tên nguồn dữ liệu mới',
 	},
-	'connection.dialog.renameDataSource.saving': { en: 'Saving...', vi: 'Đang lưu...' },
-	'connection.dialog.renameDatabase.title': { en: 'Rename database', vi: 'Đổi tên cơ sở dữ liệu' },
+	'connection.dialog.renameDataSource.saving': {
+		en: 'Saving...',
+		vi: 'Đang lưu...',
+	},
+	'connection.dialog.renameDatabase.title': {
+		en: 'Rename database',
+		vi: 'Đổi tên cơ sở dữ liệu',
+	},
 	'connection.dialog.renameDatabase.description': {
 		en: 'Enter a new name for {{name}}.',
 		vi: 'Nhập tên mới cho {{name}}.',
 	},
-	'connection.dialog.renameDatabase.label': { en: 'Database name', vi: 'Tên cơ sở dữ liệu' },
+	'connection.dialog.renameDatabase.label': {
+		en: 'Database name',
+		vi: 'Tên cơ sở dữ liệu',
+	},
 	'connection.dialog.renameDatabase.placeholder': {
 		en: 'Enter database name',
 		vi: 'Nhập tên cơ sở dữ liệu',
@@ -502,16 +691,31 @@ export const messages = {
 		en: 'Are you sure you want to delete this data source?',
 		vi: 'Bạn có chắc chắn muốn xóa nguồn dữ liệu này không?',
 	},
-	'connection.dialog.deleteDataSource.deleting': { en: 'Deleting...', vi: 'Đang xóa...' },
+	'connection.dialog.deleteDataSource.deleting': {
+		en: 'Deleting...',
+		vi: 'Đang xóa...',
+	},
 
-	'dataSource.dialog.selectTitle': { en: 'Select Data Source', vi: 'Chọn nguồn dữ liệu' },
-	'dataSource.dialog.editTitle': { en: 'Edit {{name}}', vi: 'Chỉnh sửa {{name}}' },
+	'dataSource.dialog.selectTitle': {
+		en: 'Select Data Source',
+		vi: 'Chọn nguồn dữ liệu',
+	},
+	'dataSource.dialog.editTitle': {
+		en: 'Edit {{name}}',
+		vi: 'Chỉnh sửa {{name}}',
+	},
 	'dataSource.dialog.configureTitle': {
 		en: 'Configure {{name}}',
 		vi: 'Cấu hình {{name}}',
 	},
-	'dataSource.dialog.defaultConnectionName': { en: 'Connection', vi: 'Kết nối' },
-	'dataSource.dialog.defaultDatabaseName': { en: 'Database', vi: 'Cơ sở dữ liệu' },
+	'dataSource.dialog.defaultConnectionName': {
+		en: 'Connection',
+		vi: 'Kết nối',
+	},
+	'dataSource.dialog.defaultDatabaseName': {
+		en: 'Database',
+		vi: 'Cơ sở dữ liệu',
+	},
 	'dataSource.dialog.goBack': { en: 'Go back', vi: 'Quay lại' },
 	'dataSource.form.name': { en: 'Name', vi: 'Tên' },
 	'dataSource.form.namePlaceholder': {
@@ -528,7 +732,10 @@ export const messages = {
 		en: 'e.g. postgres://user:pass@localhost:5432/db',
 		vi: 'Ví dụ: postgres://user:pass@localhost:5432/db',
 	},
-	'dataSource.form.hostPlaceholder': { en: 'e.g. localhost', vi: 'Ví dụ: localhost' },
+	'dataSource.form.hostPlaceholder': {
+		en: 'e.g. localhost',
+		vi: 'Ví dụ: localhost',
+	},
 	'dataSource.form.port': { en: 'Port', vi: 'Cổng' },
 	'dataSource.form.portPlaceholder': { en: 'e.g. 5432', vi: 'Ví dụ: 5432' },
 	'dataSource.form.filePath': { en: 'File Path', vi: 'Đường dẫn tệp' },
@@ -543,16 +750,25 @@ export const messages = {
 	},
 	'dataSource.form.authentication': { en: 'Authentication', vi: 'Xác thực' },
 	'dataSource.form.username': { en: 'Username', vi: 'Tên người dùng' },
-	'dataSource.form.usernamePlaceholder': { en: 'e.g. admin', vi: 'Ví dụ: admin' },
+	'dataSource.form.usernamePlaceholder': {
+		en: 'e.g. admin',
+		vi: 'Ví dụ: admin',
+	},
 	'dataSource.form.password': { en: 'Password', vi: 'Mật khẩu' },
-	'dataSource.form.passwordPlaceholder': { en: 'Enter your password', vi: 'Nhập mật khẩu của bạn' },
+	'dataSource.form.passwordPlaceholder': {
+		en: 'Enter your password',
+		vi: 'Nhập mật khẩu của bạn',
+	},
 	'dataSource.form.showAllDatabases': {
 		en: 'Show all databases',
 		vi: 'Hiển thị tất cả cơ sở dữ liệu',
 	},
 	'dataSource.form.savePassword': { en: 'Save password', vi: 'Lưu mật khẩu' },
 	'dataSource.form.testing': { en: 'Testing...', vi: 'Đang kiểm tra...' },
-	'dataSource.form.validating': { en: 'Validating...', vi: 'Đang xác thực...' },
+	'dataSource.form.validating': {
+		en: 'Validating...',
+		vi: 'Đang xác thực...',
+	},
 	'dataSource.form.validated': { en: 'Validated', vi: 'Đã xác thực' },
 	'dataSource.form.validateSettings': {
 		en: 'Validate settings',
@@ -600,8 +816,14 @@ export const messages = {
 		vi: 'Kết nối thành công, nhưng driver này không trả về cài đặt nâng cao nào.',
 	},
 	'dataSource.advanced.readOnly': { en: 'Read only', vi: 'Chỉ đọc' },
-	'dataSource.advanced.range': { en: 'Range: {{min}} - {{max}}', vi: 'Khoảng: {{min}} - {{max}}' },
-	'dataSource.advanced.selectValue': { en: 'Select a value', vi: 'Chọn một giá trị' },
+	'dataSource.advanced.range': {
+		en: 'Range: {{min}} - {{max}}',
+		vi: 'Khoảng: {{min}} - {{max}}',
+	},
+	'dataSource.advanced.selectValue': {
+		en: 'Select a value',
+		vi: 'Chọn một giá trị',
+	},
 	'dataSource.advanced.emptyOption': { en: '(empty)', vi: '(trống)' },
 	'dataSource.toast.connectionSuccess': {
 		en: 'Connection successful!',
@@ -628,13 +850,22 @@ export const messages = {
 		vi: 'Lưu kết nối thành công!',
 	},
 
-	'connection.schema.nameRequired': { en: 'Name is required', vi: 'Tên là bắt buộc' },
+	'connection.schema.nameRequired': {
+		en: 'Name is required',
+		vi: 'Tên là bắt buộc',
+	},
 	'connection.schema.sqlitePathRequired': {
 		en: 'SQLite requires a file path (Database)',
 		vi: 'SQLite yêu cầu đường dẫn tệp (Database)',
 	},
-	'connection.schema.hostRequired': { en: 'Host is required', vi: 'Host là bắt buộc' },
-	'connection.schema.portRequired': { en: 'Port is required', vi: 'Cổng là bắt buộc' },
+	'connection.schema.hostRequired': {
+		en: 'Host is required',
+		vi: 'Host là bắt buộc',
+	},
+	'connection.schema.portRequired': {
+		en: 'Port is required',
+		vi: 'Cổng là bắt buộc',
+	},
 	'connection.schema.usernameRequired': {
 		en: 'Username is required',
 		vi: 'Tên người dùng là bắt buộc',
@@ -647,7 +878,10 @@ export const messages = {
 		en: '{{type}} requires a database name',
 		vi: '{{type}} yêu cầu tên cơ sở dữ liệu',
 	},
-	'connection.schema.urlRequired': { en: 'URL is required', vi: 'URL là bắt buộc' },
+	'connection.schema.urlRequired': {
+		en: 'URL is required',
+		vi: 'URL là bắt buộc',
+	},
 	'connection.schema.urlInvalid': {
 		en: 'Invalid database URL format',
 		vi: 'Định dạng URL cơ sở dữ liệu không hợp lệ',
@@ -666,7 +900,10 @@ export const messages = {
 		vi: 'Đã lưu tất cả thay đổi thành công!',
 	},
 	'table.csv.emptyFile': { en: 'CSV file is empty!', vi: 'Tệp CSV trống!' },
-	'table.csv.parseFailed': { en: 'Failed to parse CSV file.', vi: 'Không thể đọc tệp CSV.' },
+	'table.csv.parseFailed': {
+		en: 'Failed to parse CSV file.',
+		vi: 'Không thể đọc tệp CSV.',
+	},
 	'table.csv.importPrepared': {
 		en: 'CSV parsed successfully. Generated INSERT SQL for {{fileName}}.',
 		vi: 'Đọc CSV thành công. Đã tạo câu lệnh INSERT cho {{fileName}}.',
@@ -696,9 +933,18 @@ export const messages = {
 		en: 'Connection is disconnected. Connect again to load table data.',
 		vi: 'Kết nối đã ngắt. Hãy kết nối lại để tải dữ liệu bảng.',
 	},
-	'table.states.loadingSchema': { en: 'Loading schema...', vi: 'Đang tải lược đồ...' },
-	'table.states.loadingData': { en: 'Loading data...', vi: 'Đang tải dữ liệu...' },
-	'table.structure.loading': { en: 'Loading structure...', vi: 'Đang tải cấu trúc...' },
+	'table.states.loadingSchema': {
+		en: 'Loading schema...',
+		vi: 'Đang tải lược đồ...',
+	},
+	'table.states.loadingData': {
+		en: 'Loading data...',
+		vi: 'Đang tải dữ liệu...',
+	},
+	'table.structure.loading': {
+		en: 'Loading structure...',
+		vi: 'Đang tải cấu trúc...',
+	},
 	'table.structure.noMetadata': {
 		en: 'No column metadata available for this table yet.',
 		vi: 'Chưa có metadata cột cho bảng này.',
@@ -716,7 +962,10 @@ export const messages = {
 		vi: 'dòng bị ảnh hưởng trong',
 	},
 	'table.result.rows': { en: 'rows', vi: 'dòng' },
-	'table.result.resultLimited': { en: 'Result is limited', vi: 'Kết quả bị giới hạn' },
+	'table.result.resultLimited': {
+		en: 'Result is limited',
+		vi: 'Kết quả bị giới hạn',
+	},
 	'table.result.memory': { en: 'Memory: {{size}}', vi: 'Bộ nhớ: {{size}}' },
 	'table.result.encodingUtf8': { en: 'UTF8', vi: 'UTF8' },
 
@@ -736,17 +985,65 @@ export const messages = {
 		en: 'CSV exported successfully: {{fileName}}',
 		vi: 'Xuất CSV thành công: {{fileName}}',
 	},
-	'query.limitedResultSet': { en: 'Limited result set', vi: 'Tập kết quả bị giới hạn' },
+	'query.limitedResultSet': {
+		en: 'Limited result set',
+		vi: 'Tập kết quả bị giới hạn',
+	},
 	'query.exportCsv': { en: 'CSV', vi: 'CSV' },
+	'query.header.saveTooltip': { en: 'Save SQL file', vi: 'Lưu file SQL' },
+	'query.header.formatTooltip': { en: 'Format SQL', vi: 'Format SQL' },
+	'query.header.historyTooltip': {
+		en: 'Recent queries',
+		vi: 'Truy vấn gần đây',
+	},
+	'query.header.historyDropdownTitle': {
+		en: 'Recent queries',
+		vi: 'Truy vấn gần đây',
+	},
+	'query.header.noQuery': {
+		en: 'No SQL content to process.',
+		vi: 'Không có nội dung SQL để xử lý.',
+	},
+	'query.header.saveSuccess': {
+		en: 'SQL file saved: {{fileName}}',
+		vi: 'Đã lưu file SQL: {{fileName}}',
+	},
+	'query.header.saveFailed': {
+		en: 'Failed to save SQL file.',
+		vi: 'Không thể lưu file SQL.',
+	},
+	'query.header.formatSuccess': {
+		en: 'SQL formatted successfully.',
+		vi: 'Đã format SQL thành công.',
+	},
+	'query.header.formatFailed': {
+		en: 'Failed to format SQL.',
+		vi: 'Không thể format SQL.',
+	},
+	'query.header.historyEmpty': {
+		en: 'Query history is empty.',
+		vi: 'Lịch sử truy vấn đang trống.',
+	},
+	'query.header.historyLoaded': {
+		en: 'Query loaded from history.',
+		vi: 'Đã nạp truy vấn từ lịch sử.',
+	},
 	'query.successTitle': {
 		en: 'Query executed successfully',
 		vi: 'Thực thi truy vấn thành công',
 	},
 	'query.log.consoleOutput': { en: 'Console Output', vi: 'Đầu ra Console' },
-	'query.log.noQueryExecuted': { en: 'No query executed', vi: 'Chưa có truy vấn nào được chạy' },
+	'query.log.noQueryExecuted': {
+		en: 'No query executed',
+		vi: 'Chưa có truy vấn nào được chạy',
+	},
 	'query.log.executionSuccessful': {
 		en: 'Execution successful',
 		vi: 'Thực thi thành công',
+	},
+	'query.log.executionFailed': {
+		en: 'Execution failed',
+		vi: 'Thực thi thất bại',
 	},
 	'query.log.queryExecutedIn': {
 		en: 'Query executed in',
@@ -756,10 +1053,48 @@ export const messages = {
 		en: 'Rows affected / returned:',
 		vi: 'Số dòng ảnh hưởng / trả về:',
 	},
-	'query.log.resultLimited': { en: 'Result is limited.', vi: 'Kết quả bị giới hạn.' },
-	'query.plan.loading': { en: 'Loading Query Plan...', vi: 'Đang tải kế hoạch truy vấn...' },
+	'query.log.resultLimited': {
+		en: 'Result is limited.',
+		vi: 'Kết quả bị giới hạn.',
+	},
+	'query.resultPanel.show': { en: 'Show results', vi: 'Hiện kết quả' },
+	'query.resultPanel.hide': { en: 'Hide results', vi: 'Ẩn kết quả' },
+	'query.resultPanel.resize': {
+		en: 'Resize results panel',
+		vi: 'Thay đổi kích thước khung kết quả',
+	},
+	'query.monacoTheme.quickPicker': {
+		en: 'Editor theme',
+		vi: 'Theme editor',
+	},
+	'query.monacoTheme.quickHint': {
+		en: 'Applies to all Monaco editors in the app.',
+		vi: 'Áp dụng cho toàn bộ Monaco editor trong app.',
+	},
+	'query.plan.loading': {
+		en: 'Loading Query Plan...',
+		vi: 'Đang tải kế hoạch truy vấn...',
+	},
 	'query.plan.title': { en: 'Execution Plan', vi: 'Kế hoạch thực thi' },
-	'query.plan.noPlan': { en: 'No Query Plan Available', vi: 'Không có kế hoạch truy vấn' },
+	'query.plan.viewerTheme': { en: 'Viewer theme', vi: 'Theme hiển thị' },
+	'query.plan.theme.light': { en: 'Light', vi: 'Sáng' },
+	'query.plan.theme.dark': { en: 'Dark', vi: 'Tối' },
+	'query.plan.theme.highContrastDark': {
+		en: 'High Contrast Dark',
+		vi: 'Tương phản cao tối',
+	},
+	'query.plan.theme.highContrastLight': {
+		en: 'High Contrast Light',
+		vi: 'Tương phản cao sáng',
+	},
+	'query.plan.errorTitle': {
+		en: 'Unable to generate query plan',
+		vi: 'Không thể tạo kế hoạch truy vấn',
+	},
+	'query.plan.noPlan': {
+		en: 'No Query Plan Available',
+		vi: 'Không có kế hoạch truy vấn',
+	},
 	'query.plan.noPlanDescription': {
 		en: 'Query Plan is only automatically generated for SELECT statements to ensure database safety.',
 		vi: 'Kế hoạch truy vấn chỉ tự động tạo cho câu lệnh SELECT để đảm bảo an toàn cơ sở dữ liệu.',
@@ -780,12 +1115,18 @@ export const messages = {
 		en: 'Execute Anyway',
 		vi: 'Vẫn thực thi',
 	},
-	'query.context.dataSources': { en: '{data_sources}', vi: '{nguon_du_lieu}' },
+	'query.context.dataSources': {
+		en: '{data_sources}',
+		vi: '{nguon_du_lieu}',
+	},
 	'query.context.loading': { en: '{loading...}', vi: '{dang_tai...}' },
 	'query.context.database': { en: '{database}', vi: '{co_so_du_lieu}' },
 	'query.context.unspecified': { en: 'Unspecified', vi: 'Không chỉ định' },
 
-	'errors.failedFetchTables': { en: 'Failed to fetch tables.', vi: 'Không thể tải danh sách bảng.' },
+	'errors.failedFetchTables': {
+		en: 'Failed to fetch tables.',
+		vi: 'Không thể tải danh sách bảng.',
+	},
 	'errors.failedFetchDatabases': {
 		en: 'Failed to fetch databases. The database server may be offline.',
 		vi: 'Không thể tải cơ sở dữ liệu. Máy chủ cơ sở dữ liệu có thể đang ngoại tuyến.',
@@ -802,11 +1143,26 @@ export const messages = {
 		en: 'Cannot connect to the database server. It may be offline (for example, your Docker container is not running). Start it and reconnect to load databases.',
 		vi: 'Không thể kết nối tới máy chủ cơ sở dữ liệu. Có thể máy chủ đang ngoại tuyến (ví dụ container Docker chưa chạy). Hãy khởi động và kết nối lại để tải cơ sở dữ liệu.',
 	},
-	'errors.failedFetchSchema': { en: 'Failed to fetch schema.', vi: 'Không thể tải lược đồ.' },
-	'errors.failedFetchTablePreview': { en: 'Failed to fetch table preview.', vi: 'Không thể tải bản xem trước bảng.' },
-	'errors.failedFetchQueryPlan': { en: 'Failed to fetch query plan.', vi: 'Không thể tải kế hoạch truy vấn.' },
-	'errors.failedRunQuery': { en: 'Failed to run query', vi: 'Không thể chạy truy vấn' },
-	'errors.failedSaveChanges': { en: 'Failed to save changes.', vi: 'Không thể lưu thay đổi.' },
+	'errors.failedFetchSchema': {
+		en: 'Failed to fetch schema.',
+		vi: 'Không thể tải lược đồ.',
+	},
+	'errors.failedFetchTablePreview': {
+		en: 'Failed to fetch table preview.',
+		vi: 'Không thể tải bản xem trước bảng.',
+	},
+	'errors.failedFetchQueryPlan': {
+		en: 'Failed to fetch query plan.',
+		vi: 'Không thể tải kế hoạch truy vấn.',
+	},
+	'errors.failedRunQuery': {
+		en: 'Failed to run query',
+		vi: 'Không thể chạy truy vấn',
+	},
+	'errors.failedSaveChanges': {
+		en: 'Failed to save changes.',
+		vi: 'Không thể lưu thay đổi.',
+	},
 	'errors.failedConnectDataSource': {
 		en: 'Failed to connect data source.',
 		vi: 'Không thể kết nối nguồn dữ liệu.',
@@ -899,7 +1255,10 @@ export const translate = (
 
 	return Object.entries(params).reduce(
 		(acc, [paramKey, value]) =>
-			acc.replace(new RegExp(`\\{\\{${paramKey}\\}\\}`, 'g'), String(value)),
+			acc.replace(
+				new RegExp(`\\{\\{${paramKey}\\}\\}`, 'g'),
+				String(value),
+			),
 		template,
 	)
 }

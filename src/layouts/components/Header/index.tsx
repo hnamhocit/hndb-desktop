@@ -150,7 +150,7 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 						className={toolbarButtonClass}>
 						{isDarkMode ?
 							<MoonIcon className='w-4 h-4' />
-							: <SunIcon className='w-4 h-4' />}
+						:	<SunIcon className='w-4 h-4' />}
 					</button>
 				</motion.div>
 
@@ -215,12 +215,12 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 									<LogOutIcon className='w-4 h-4 mr-2' />
 									{isLoggingOut ?
 										t('common.loggingOut')
-										: t('common.logout')}
+									:	t('common.logout')}
 								</DropdownMenuItem>
 							</DropdownMenuContent>
 						</DropdownMenu>
 					</>
-					: null}
+				:	null}
 			</div>
 		</motion.header>
 	)

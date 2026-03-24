@@ -86,7 +86,10 @@ const Sidebar = ({ isMobileOpen = false, onCloseMobile }: SidebarProps) => {
 					'md:translate-x-0',
 				)}>
 				{connectionId ?
-					<Databases dataSourceId={connectionId} />
+					<Databases
+						dataSourceId={connectionId}
+						isConnecting={connectingId === connectionId}
+					/>
 					: <div className='px-4 py-6 text-sm text-muted-foreground'>
 						{t('sidebar.selectConnection')}
 					</div>

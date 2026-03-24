@@ -1,6 +1,6 @@
-use crate::db_client::DbClient;
 use crate::helpers::{
-    build_conn_str, check_and_disconnect_if_fatal, ensure_connection_is_connected, get_config_by_id, override_database,
+    check_and_disconnect_if_fatal, ensure_connection_is_connected,
+    get_or_create_active_connection, get_or_create_database_connection,
 };
 use crate::state::AppState;
 
@@ -92,59 +92,30 @@ pub async fn execute_query(
         ));
     }
 
-    if let Some(target_database) = database.as_deref() {
-        let config = get_config_by_id(&app, id.as_str())?;
-        let effective_config = override_database(&config, Some(target_database))?;
-        let conn_str = build_conn_str(&effective_config)?;
-        let client = match DbClient::connect(&effective_config.driver, &conn_str).await {
-            Ok(c) => c,
+    let client = if let Some(target_database) = database.as_deref() {
+        match get_or_create_database_connection(id.as_str(), target_database, &app, &state).await
+        {
+            Ok(client) => client,
             Err(e) => {
                 check_and_disconnect_if_fatal(&id, &state, &e).await;
                 return Err(e);
             }
-        };
-
-        let result = client.run_sql(&query).await;
-        client.close().await;
-
-        if let Err(ref err) = result {
-            check_and_disconnect_if_fatal(&id, &state, err).await;
         }
-
-        return result;
-    }
-
-    let connections_map = state.active_connections.lock().await;
-
-    if let Some(client) = connections_map.get(&id) {
-        let result = client.run_sql(&query).await;
-        if let Err(ref err) = result {
-            // Drop explicitly
-            drop(connections_map);
-            check_and_disconnect_if_fatal(&id, &state, err).await;
-            return result;
-        }
-
-        result
     } else {
-        drop(connections_map);
-        let config = get_config_by_id(&app, id.as_str())?;
-        let conn_str = build_conn_str(&config)?;
-        let client = match DbClient::connect(&config.driver, &conn_str).await {
-            Ok(c) => c,
+        match get_or_create_active_connection(id.as_str(), &app, &state).await {
+            Ok(client) => client,
             Err(e) => {
                 check_and_disconnect_if_fatal(&id, &state, &e).await;
                 return Err(e);
             }
-        };
-
-        let result = client.run_sql(&query).await;
-        client.close().await;
-
-        if let Err(ref err) = result {
-            check_and_disconnect_if_fatal(&id, &state, err).await;
         }
+    };
 
-        result
+    let result = client.run_sql(&query).await;
+
+    if let Err(ref err) = result {
+        check_and_disconnect_if_fatal(&id, &state, err).await;
     }
+
+    result
 }

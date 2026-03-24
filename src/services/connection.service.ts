@@ -65,6 +65,49 @@ const isExplainableQuery = (query: string) => {
 	return firstCommand === 'SELECT' || firstCommand === 'WITH'
 }
 
+const buildExplainQuery = (driver: IConnection['config']['driver'], query: string) => {
+	const normalizedQuery = trimTrailingSemicolons(query.trim())
+
+	switch (driver) {
+		case 'postgres':
+			return `EXPLAIN (FORMAT JSON, VERBOSE) ${normalizedQuery}`
+		case 'mysql':
+		case 'mariadb':
+			return `EXPLAIN FORMAT=JSON ${normalizedQuery}`
+		case 'sqlite':
+			return `EXPLAIN QUERY PLAN ${normalizedQuery}`
+		default:
+			return `EXPLAIN ${normalizedQuery}`
+	}
+}
+
+const normalizeExplainPlan = (rows: Record<string, unknown>[]) => {
+	if (rows.length !== 1) {
+		return rows
+	}
+
+	const firstRow = rows[0]
+	const entries = Object.entries(firstRow)
+	if (entries.length !== 1) {
+		return rows
+	}
+
+	const [, value] = entries[0]
+	if (value && typeof value === 'object') {
+		return value
+	}
+
+	if (typeof value !== 'string') {
+		return rows
+	}
+
+	try {
+		return JSON.parse(value) as unknown
+	} catch {
+		return rows
+	}
+}
+
 const invokeQueryRows = async (
 	connectionId: string,
 	database: string | null,
@@ -256,15 +299,28 @@ export const connectionService = {
 		connectionId: string,
 		query: string,
 		database: string | null,
+		driver: IConnection['config']['driver'],
 	) {
 		if (!query.trim() || !isExplainableQuery(query)) {
 			return wrapData(null)
 		}
 
-		const explainQuery = `EXPLAIN ${trimTrailingSemicolons(query.trim())}`
-		const rows = await invokeQueryRows(connectionId, database, explainQuery)
+		const explainQuery = buildExplainQuery(driver, query)
+		const fallbackExplainQuery = `EXPLAIN ${trimTrailingSemicolons(query.trim())}`
+		let rows: Record<string, unknown>[]
+
+		try {
+			rows = await invokeQueryRows(connectionId, database, explainQuery)
+		} catch (error) {
+			if (explainQuery === fallbackExplainQuery) {
+				throw error
+			}
+
+			rows = await invokeQueryRows(connectionId, database, fallbackExplainQuery)
+		}
+
 		syncConnectionStatusesInBackground()
 
-		return wrapData(rows)
+		return wrapData(normalizeExplainPlan(rows))
 	},
 }

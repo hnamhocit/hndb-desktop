@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub enum DbClient {
     Postgres(sqlx::PgPool),
     Mysql(sqlx::MySqlPool),

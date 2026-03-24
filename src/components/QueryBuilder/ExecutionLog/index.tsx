@@ -1,18 +1,25 @@
-import { AlertTriangleIcon, CheckCircle2Icon, TerminalIcon } from 'lucide-react'
+import {
+	AlertTriangleIcon,
+	CheckCircle2Icon,
+	TerminalIcon,
+	XCircleIcon,
+} from 'lucide-react'
 
 import { useI18n } from '@/hooks'
 import { IQueryResult } from '@/interfaces'
 import { formatCompactCount, formatDurationMs } from '@/utils'
 
 interface ExecutionLogProps {
-	result: IQueryResult
+	result: IQueryResult | null
 	query: string
+	errorMessage?: string | null
 }
 
-const ExecutionLog = ({ result, query }: ExecutionLogProps) => {
+const ExecutionLog = ({ result, query, errorMessage }: ExecutionLogProps) => {
 	const { t } = useI18n()
 	// Format thời gian hiện tại
 	const now = new Date().toLocaleTimeString()
+	const isFailed = Boolean(errorMessage)
 
 	return (
 		<div className='w-full h-full overflow-auto bg-[#1e1e1e] text-neutral-300 font-mono text-sm p-4'>
@@ -31,32 +38,55 @@ const ExecutionLog = ({ result, query }: ExecutionLogProps) => {
 
 			{/* Block trạng thái */}
 			<div className='flex items-start gap-3 mt-4'>
-				<CheckCircle2Icon
-					className='text-green-500 mt-0.5'
-					size={18}
-				/>
+				{isFailed ?
+					<XCircleIcon
+						className='text-red-500 mt-0.5'
+						size={18}
+					/>
+				:	<CheckCircle2Icon
+						className='text-green-500 mt-0.5'
+						size={18}
+					/>
+				}
 				<div className='flex flex-col gap-1'>
-					<span className='text-green-400 font-bold'>
-						{t('query.log.executionSuccessful')}
+					<span
+						className={
+							isFailed ?
+								'text-red-400 font-bold'
+							:	'text-green-400 font-bold'
+						}>
+						{isFailed ?
+							t('query.log.executionFailed')
+						:	t('query.log.executionSuccessful')}
 					</span>
 
-					<span className='text-neutral-400'>
-						[{now}] {t('query.log.queryExecutedIn')}{' '}
-						<span className='text-yellow-400'>
-							{formatDurationMs(result.durationMs)}
+					{result && (
+						<span className='text-neutral-400'>
+							[{now}] {t('query.log.queryExecutedIn')}{' '}
+							<span className='text-yellow-400'>
+								{formatDurationMs(result.durationMs)}
+							</span>
 						</span>
-					</span>
+					)}
 
-					<span className='text-neutral-400'>
-						{t('query.log.rowsAffectedReturned')}{' '}
-						<span className='text-yellow-400'>
-							{formatCompactCount(
-								result.rows?.length || result.affectedRows || 0,
-							)}
+					{result && (
+						<span className='text-neutral-400'>
+							{t('query.log.rowsAffectedReturned')}{' '}
+							<span className='text-yellow-400'>
+								{formatCompactCount(
+									result.rows?.length || result.affectedRows || 0,
+								)}
+							</span>
 						</span>
-					</span>
+					)}
 
-					{result.isLimited && (
+					{isFailed && (
+						<div className='mt-2 max-w-full rounded border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-200 whitespace-pre-wrap break-words'>
+							{errorMessage}
+						</div>
+					)}
+
+					{result?.isLimited && (
 						<span className='inline-flex items-center gap-1 text-amber-400'>
 							<AlertTriangleIcon size={14} />
 							{t('query.log.resultLimited')}

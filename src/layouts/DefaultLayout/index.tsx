@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react'
 
+import { matchesShortcut } from '@/lib/keybindings'
 import { Outlet, useNavigate } from 'react-router'
-import { useActiveStore, useTabsStore } from '@/stores'
+import { useActiveStore, usePreferencesStore, useTabsStore } from '@/stores'
 import { getTabConnectionId } from '@/utils'
 import Header from '../components/Header'
 import Sidebar from '../components/Sidebar'
@@ -33,6 +34,7 @@ const isEditableTarget = (target: EventTarget | null) => {
 
 const DefaultLayout = () => {
 	const navigate = useNavigate()
+	const keybindings = usePreferencesStore((state) => state.keybindings)
 	const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
 
 	useEffect(() => {
@@ -89,67 +91,66 @@ const DefaultLayout = () => {
 			visibleInput.select()
 		}
 
+		const openSettingsJsonShortcut = () => {
+			navigate('/me/settings?tab=config')
+		}
+
 		const handleGlobalKeydown = (event: KeyboardEvent) => {
 			if (event.defaultPrevented || event.isComposing) return
 
 			const hasCtrlOrMeta = event.ctrlKey || event.metaKey
 			const editableTarget = isEditableTarget(event.target)
 
-			if (
-				hasCtrlOrMeta &&
-				!event.altKey &&
-				!event.shiftKey &&
-				event.key === 'Enter'
-			) {
+			if (matchesShortcut(event, keybindings.openSettingsJson)) {
+				event.preventDefault()
+				openSettingsJsonShortcut()
+				return
+			}
+
+			if (matchesShortcut(event, keybindings.runQuery)) {
 				event.preventDefault()
 				triggerRunQueryShortcut()
 				return
 			}
 
-			if (
-				hasCtrlOrMeta &&
-				!event.altKey &&
-				!event.shiftKey &&
-				event.key.toLowerCase() === 'k'
-			) {
+			if (matchesShortcut(event, keybindings.quickSearch)) {
 				event.preventDefault()
 				triggerQuickSearchShortcut()
 				return
 			}
 
-			if (
-				event.altKey &&
-				!hasCtrlOrMeta &&
-				(event.key === '[' || event.code === 'BracketLeft')
-			) {
+			if (matchesShortcut(event, keybindings.previousTab)) {
 				event.preventDefault()
 				switchActiveTab(-1)
 				return
 			}
 
-			if (
-				event.altKey &&
-				!hasCtrlOrMeta &&
-				(event.key === ']' || event.code === 'BracketRight')
-			) {
+			if (matchesShortcut(event, keybindings.nextTab)) {
 				event.preventDefault()
 				switchActiveTab(1)
 				return
 			}
 
-			if (
-				(hasCtrlOrMeta && (event.key.toLowerCase() === 't' || event.key === '+' || event.key === '=')) ||
-				(!editableTarget && !hasCtrlOrMeta && !event.altKey && event.key === '+')
-			) {
+			if (matchesShortcut(event, keybindings.newQuery)) {
 				event.preventDefault()
 				triggerNewQueryShortcut()
 				return
+			}
+
+			if (
+				!editableTarget &&
+				!hasCtrlOrMeta &&
+				!event.altKey &&
+				event.key === '+'
+			) {
+				event.preventDefault()
+				triggerNewQueryShortcut()
 			}
 		}
 
 		window.addEventListener('keydown', handleGlobalKeydown)
 		return () => window.removeEventListener('keydown', handleGlobalKeydown)
-	}, [navigate])
+	}, [keybindings, navigate])
 
 	return (
 		<div className='h-screen overflow-hidden'>

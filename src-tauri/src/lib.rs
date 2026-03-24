@@ -49,6 +49,7 @@ pub fn run() {
         })
         .manage(AppState {
             active_connections: Mutex::new(std::collections::HashMap::new()),
+            active_database_connections: Mutex::new(std::collections::HashMap::new()),
             manually_disconnected_connections: Mutex::new(std::collections::HashSet::new()),
         })
         .plugin(tauri_plugin_store::Builder::new().build())

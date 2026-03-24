@@ -7,6 +7,7 @@ import {
 	AccordionItem,
 	AccordionTrigger,
 } from '@/components/ui/accordion'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useActiveTab, useDatabases, useI18n } from '@/hooks'
 import { useActiveStore, useConnectionStore, useTabsStore } from '@/stores'
 import DatabaseContextMenu from '../DatabaseContextMenu'
@@ -15,9 +16,16 @@ import Tables from './Tables'
 interface DatabasesProps {
 	dataSourceId: string
 	autoFetch?: boolean
+	isConnecting?: boolean
 }
 
-const Databases = ({ dataSourceId, autoFetch = true }: DatabasesProps) => {
+const databaseSkeletonWidths = ['w-24', 'w-32', 'w-28', 'w-36']
+
+const Databases = ({
+	dataSourceId,
+	autoFetch = true,
+	isConnecting = false,
+}: DatabasesProps) => {
 	const { t } = useI18n()
 	const { databases, isLoading, errorMessage } = useDatabases(dataSourceId, {
 		autoFetch,
@@ -44,10 +52,19 @@ const Databases = ({ dataSourceId, autoFetch = true }: DatabasesProps) => {
 		}
 	}
 
-	if (isLoading) {
+	if (isLoading || isConnecting) {
 		return (
-			<div className='px-4 py-6 text-center text-sm text-muted-foreground'>
-				{t('sidebar.loadingDatabases')}
+			<div className='space-y-2 px-3 py-3'>
+				{databaseSkeletonWidths.map((width, index) => (
+					<div
+						key={`${width}-${index}`}
+						className='overflow-hidden rounded-lg border border-border/70 bg-background'>
+						<div className='flex items-center gap-3 px-4 py-3'>
+							<Skeleton className='h-4 w-4 shrink-0 rounded-sm' />
+							<Skeleton className={`h-4 ${width}`} />
+						</div>
+					</div>
+				))}
 			</div>
 		)
 	}
@@ -60,10 +77,10 @@ const Databases = ({ dataSourceId, autoFetch = true }: DatabasesProps) => {
 		)
 	}
 
-	if (connectionStatus === false) {
+	if (connectionStatus === false && databases.length === 0) {
 		return (
 			<div className='px-4 py-6 text-center text-sm text-muted-foreground'>
-				{t('errors.unreachableConnectionLoadDatabases')}
+				{t('sidebar.connectToLoadDatabases')}
 			</div>
 		)
 	}

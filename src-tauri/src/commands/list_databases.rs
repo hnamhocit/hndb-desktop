@@ -1,5 +1,7 @@
-use crate::db_client::DbClient;
-use crate::helpers::{build_conn_str, check_and_disconnect_if_fatal, ensure_connection_is_connected, get_config_by_id};
+use crate::helpers::{
+    check_and_disconnect_if_fatal, ensure_connection_is_connected,
+    get_or_create_active_connection,
+};
 use crate::state::AppState;
 
 #[tauri::command]
@@ -10,9 +12,7 @@ pub async fn list_databases(
 ) -> Result<Vec<String>, String> {
     ensure_connection_is_connected(&id, &state).await?;
 
-    let config = get_config_by_id(&app, id.as_str())?;
-    let conn_str = build_conn_str(&config)?;
-    let client = match DbClient::connect(&config.driver, &conn_str).await {
+    let client = match get_or_create_active_connection(id.as_str(), &app, &state).await {
         Ok(c) => c,
         Err(e) => {
             check_and_disconnect_if_fatal(&id, &state, &e).await;
@@ -21,7 +21,6 @@ pub async fn list_databases(
     };
 
     let result = client.list_databases().await;
-    client.close().await;
 
     if let Err(ref err) = result {
         check_and_disconnect_if_fatal(&id, &state, err).await;

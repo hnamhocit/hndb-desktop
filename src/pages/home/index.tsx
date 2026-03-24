@@ -20,21 +20,17 @@ export default function Home() {
 	const [now, setNow] = useState(() => new Date())
 	const hour = now.getHours()
 	const greeting =
-		hour < 12 ?
-			t('home.greetingMorning')
-			: hour < 18 ?
-				t('home.greetingAfternoon')
-				: t('home.greetingEvening')
+		hour < 12 ? t('home.greetingMorning')
+		: hour < 18 ? t('home.greetingAfternoon')
+		: t('home.greetingEvening')
 	const subtitle =
-		hour < 12 ?
-			t('home.subtitleMorning')
-			: hour < 18 ?
-				t('home.subtitleAfternoon')
-				: t('home.subtitleEvening')
+		hour < 12 ? t('home.subtitleMorning')
+		: hour < 18 ? t('home.subtitleAfternoon')
+		: t('home.subtitleEvening')
 	const Icon =
 		hour < 12 ? SunIcon
-			: hour < 18 ? SunsetIcon
-				: MoonIcon
+		: hour < 18 ? SunsetIcon
+		: MoonIcon
 	const locale = language === 'vi' ? 'vi-VN' : 'en-US'
 	const timeLabel = useMemo(
 		() =>
@@ -88,7 +84,9 @@ export default function Home() {
 							<div className='flex flex-wrap items-center gap-2.5 text-xs xl:text-sm text-muted-foreground'>
 								<div className='inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 xl:px-3 py-1.5'>
 									<CalendarDaysIcon className='h-3.5 w-3.5 xl:h-4 xl:w-4' />
-									<span className='capitalize'>{dateLabel}</span>
+									<span className='capitalize'>
+										{dateLabel}
+									</span>
 								</div>
 
 								<div className='inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 xl:px-3 py-1.5'>
@@ -107,13 +105,21 @@ export default function Home() {
 								{[
 									[t('home.actionNewQuery'), '+'],
 									[t('home.actionSwitchTab'), 'Alt + [ ]'],
-									[t('home.actionRunQuery'), 'Cmd/Ctrl + Enter'],
-									[t('home.actionQuickSearch'), 'Cmd/Ctrl + K'],
+									[
+										t('home.actionRunQuery'),
+										'Cmd/Ctrl + Enter',
+									],
+									[
+										t('home.actionQuickSearch'),
+										'Cmd/Ctrl + k',
+									],
 								].map(([label, shortcut]) => (
 									<div
 										key={label}
 										className='flex items-center justify-between gap-3 rounded-xl bg-background px-2.5 xl:px-3 py-1.5 xl:py-2 text-muted-foreground'>
-										<span className='min-w-0 flex-1'>{label}</span>
+										<span className='min-w-0 flex-1'>
+											{label}
+										</span>
 										<span className='shrink-0 rounded-md border border-border bg-muted px-2 py-0.5 xl:py-1 text-[11px] xl:text-xs font-medium text-foreground'>
 											{shortcut}
 										</span>
@@ -124,8 +130,8 @@ export default function Home() {
 					</div>
 				</div>
 			</div>
-			: activeTab.type === 'query' ? <QueryBuilder />
-				: activeTab.type === 'table' ? <TableDetail />
-					: <div>{t('home.unknownTabType')}</div>
+		: activeTab.type === 'query' ? <QueryBuilder />
+		: activeTab.type === 'table' ? <TableDetail />
+		: <div>{t('home.unknownTabType')}</div>
 	)
 }

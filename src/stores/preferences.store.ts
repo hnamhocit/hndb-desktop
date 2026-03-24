@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 
+import { DEFAULT_KEYBINDINGS, type ShortcutActionId } from '@/lib/keybindings'
 import {
 	applyPreferencesToDom,
 	DEFAULT_PREFERENCES,
@@ -10,6 +11,7 @@ import {
 import type {
 	AppFontFamily,
 	AppLanguage,
+	AppMonacoTheme,
 	AppMonoFontFamily,
 	AppPreferences,
 	AppTheme,
@@ -24,6 +26,12 @@ interface PreferencesStore extends AppPreferences {
 	setLanguage: (language: AppLanguage) => Promise<void>
 	toggleLanguage: () => Promise<void>
 	setFontSize: (fontSize: number) => Promise<void>
+	setMonacoTheme: (monacoTheme: AppMonacoTheme) => Promise<void>
+	setKeybinding: (
+		actionId: ShortcutActionId,
+		shortcut: string,
+	) => Promise<void>
+	resetKeybindings: () => Promise<void>
 	setFontFamily: (fontFamily: AppFontFamily) => Promise<void>
 	setMonoFontFamily: (monoFontFamily: AppMonoFontFamily) => Promise<void>
 	setUploadedFont: (uploadedFont: UploadedFontPreference | null) => Promise<void>
@@ -37,6 +45,8 @@ const pickPreferences = (state: PreferencesStore): AppPreferences => ({
 	theme: state.theme,
 	language: state.language,
 	fontSize: state.fontSize,
+	monacoTheme: state.monacoTheme,
+	keybindings: state.keybindings,
 	fontFamily: state.fontFamily,
 	monoFontFamily: state.monoFontFamily,
 	uploadedFont: state.uploadedFont,
@@ -83,6 +93,36 @@ export const usePreferencesStore = create<PreferencesStore>((set, get) => ({
 		const next = { ...pickPreferences(get()), fontSize }
 		applyPreferencesToDom(next)
 		set({ fontSize })
+		await savePreferences(next)
+	},
+
+	setMonacoTheme: async (monacoTheme) => {
+		const next = { ...pickPreferences(get()), monacoTheme }
+		applyPreferencesToDom(next)
+		set({ monacoTheme })
+		await savePreferences(next)
+	},
+
+	setKeybinding: async (actionId, shortcut) => {
+		const next = {
+			...pickPreferences(get()),
+			keybindings: {
+				...get().keybindings,
+				[actionId]: shortcut,
+			},
+		}
+		applyPreferencesToDom(next)
+		set({ keybindings: next.keybindings })
+		await savePreferences(next)
+	},
+
+	resetKeybindings: async () => {
+		const next = {
+			...pickPreferences(get()),
+			keybindings: { ...DEFAULT_KEYBINDINGS },
+		}
+		applyPreferencesToDom(next)
+		set({ keybindings: next.keybindings })
 		await savePreferences(next)
 	},
 

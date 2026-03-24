@@ -36,11 +36,17 @@ export const useDatabases = (
 
 	const databases = cached ?? []
 
+	useEffect(() => {
+		setIsLoading(false)
+		setErrorMessage(null)
+		inFlightRef.current = false
+	}, [dataSourceId])
+
 	const fetchDatabases = useCallback(
 		async (forceReload = false) => {
 			if (!hasValidDataSourceId) return
 			if (isDisconnected) {
-				setErrorMessage(t('errors.unreachableConnection'))
+				setIsLoading(false)
 				return
 			}
 			if (!forceReload && hasCachedDatabases) return
@@ -88,13 +94,6 @@ export const useDatabases = (
 		if (!autoFetch || !hasValidDataSourceId) return
 		void fetchDatabases()
 	}, [fetchDatabases, autoFetch, hasValidDataSourceId])
-
-	useEffect(() => {
-		if (isDisconnected) {
-			setIsLoading(false)
-			setErrorMessage(t('errors.unreachableConnection'))
-		}
-	}, [isDisconnected, t])
 
 	const reload = useCallback(async () => {
 		await fetchDatabases(true)

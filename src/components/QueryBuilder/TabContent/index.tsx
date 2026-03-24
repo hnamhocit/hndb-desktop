@@ -1,9 +1,8 @@
 import { CheckCircle2Icon } from 'lucide-react'
 
 import QueryTable from '@/components/QueryTable'
-import { useActiveTab, useI18n } from '@/hooks'
+import { useI18n } from '@/hooks'
 import { IQueryResult } from '@/interfaces'
-import { useTabsStore } from '@/stores'
 import { formatCompactCount, formatDurationMs } from '@/utils'
 import { TabId } from '..'
 import ExecutionLog from '../ExecutionLog'
@@ -11,24 +10,31 @@ import QueryPlan from '../QueryPlan'
 
 interface TabContentProps {
 	currentTab: TabId
-	result: IQueryResult
+	result: IQueryResult | null
+	executedQuery: string
+	connectionDriver: 'postgres' | 'mysql' | 'mariadb' | 'sqlite' | 'mssql'
+	executionError?: string | null
 }
 
-const TabContent = ({ currentTab, result }: TabContentProps) => {
+const TabContent = ({
+	currentTab,
+	result,
+	executedQuery,
+	connectionDriver,
+	executionError = null,
+}: TabContentProps) => {
 	const { t } = useI18n()
-	const { contentById } = useTabsStore()
-	const activeTab = useActiveTab()
 
 	return (
-		<div className='flex-1 overflow-hidden bg-white dark:bg-[#090b10] relative'>
-			{currentTab === 'results' && result.rows.length > 0 && (
+		<div className='relative h-full min-h-0 w-full overflow-hidden bg-white dark:bg-[#090b10]'>
+			{currentTab === 'results' && result && result.rows.length > 0 && (
 				<QueryTable
 					columns={Object.keys(result.rows[0] || [])}
 					rows={result.rows || []}
 				/>
 			)}
 
-			{currentTab === 'results' &&
+			{currentTab === 'results' && result &&
 				(!result.rows || result.rows.length === 0) && (
 					<div className='w-full h-full flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 gap-4 animate-in fade-in duration-300'>
 						<div className='w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400'>
@@ -54,12 +60,16 @@ const TabContent = ({ currentTab, result }: TabContentProps) => {
 			{currentTab === 'execution-log' && (
 				<ExecutionLog
 					result={result}
-					query={contentById[activeTab!.id]}
+					query={executedQuery}
+					errorMessage={executionError}
 				/>
 			)}
 
 			{currentTab === 'query-plan' && (
-				<QueryPlan query={contentById[activeTab!.id]} />
+				<QueryPlan
+					query={executedQuery}
+					driver={connectionDriver}
+				/>
 			)}
 		</div>
 	)

@@ -1,30 +1,31 @@
 import clsx from 'clsx'
 import {
 	ArrowDownToLineIcon,
+	ChevronDownIcon,
+	ChevronUpIcon,
 	DatabaseIcon,
-	HistoryIcon,
-	PlayIcon,
-	SaveIcon,
+	GripHorizontalIcon,
 	TimerIcon,
-	WandSparklesIcon,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { format as formatSql } from 'sql-formatter'
 
 import { useActiveTab, useI18n } from '@/hooks'
-import { IQueryResult } from '@/interfaces'
+import { IConnection, IQueryResult } from '@/interfaces'
 import { connectionService } from '@/services'
-import { useConnectionStore, useTabsStore } from '@/stores'
+import { useConnectionStore, usePreferencesStore, useTabsStore } from '@/stores'
 import {
 	exportToCsv,
 	formatCompactCount,
 	formatDurationMs,
+	formatErrorMessage,
 	getTabConnectionId,
 	notifyError,
 } from '@/utils'
 import { Button } from '../ui/button'
 import ConfirmQueryDialog from './ConfirmQueryDialog'
-import SqlContextSelector from './SqlContextSelector'
+import Header from './Header/index'
 import SqlEditor from './SqlEditor'
 import TabContent from './TabContent'
 
@@ -33,6 +34,40 @@ const tabIds = ['results', 'execution-log', 'query-plan'] as const
 export type TabId = (typeof tabIds)[number]
 
 const DANGEROUS_QUERY_MARKER = 'DANGEROUS_QUERY'
+const RESULT_PANEL_MIN_HEIGHT = 220
+const RESULT_PANEL_DEFAULT_HEIGHT = 320
+const RESULT_PANEL_MAX_VIEWPORT_RATIO = 0.72
+const QUERY_HISTORY_STORAGE_KEY = 'hndb.query.history'
+const MAX_QUERY_HISTORY_ITEMS = 20
+const HISTORY_DROPDOWN_LIMIT = 10
+
+type QueryHistoryItem = {
+	query: string
+	savedAt: string
+}
+
+const getSqlFormatterLanguage = (driver: IConnection['config']['driver']) => {
+	switch (driver) {
+		case 'postgres':
+			return 'postgresql'
+		case 'mysql':
+		case 'mariadb':
+			return 'mysql'
+		case 'sqlite':
+			return 'sqlite'
+		case 'mssql':
+			return 'transactsql'
+		default:
+			return 'sql'
+	}
+}
+
+const sanitizeFileName = (value: string) =>
+	value
+		.trim()
+		.replace(/[^a-zA-Z0-9-_]+/g, '-')
+		.replace(/-+/g, '-')
+		.replace(/^-|-$/g, '')
 
 const getErrorText = (error: unknown): string => {
 	if (typeof error === 'string') {
@@ -60,19 +95,78 @@ const getErrorText = (error: unknown): string => {
 const isDangerousQueryError = (error: unknown) =>
 	getErrorText(error).toUpperCase().includes(DANGEROUS_QUERY_MARKER)
 
+const clampResultPanelHeight = (nextHeight: number) => {
+	if (typeof window === 'undefined') {
+		return Math.max(RESULT_PANEL_MIN_HEIGHT, nextHeight)
+	}
+
+	const maxHeight = Math.max(
+		RESULT_PANEL_MIN_HEIGHT,
+		Math.floor(window.innerHeight * RESULT_PANEL_MAX_VIEWPORT_RATIO),
+	)
+
+	return Math.min(maxHeight, Math.max(RESULT_PANEL_MIN_HEIGHT, nextHeight))
+}
+
 const QueryBuilder = () => {
 	const { t } = useI18n()
 	const [currentTab, setCurrentTab] = useState<TabId>('results')
 	const [isLoading, setIsLoading] = useState(false)
 	const [result, setResult] = useState<IQueryResult | null>(null)
+	const [executedQuery, setExecutedQuery] = useState('')
+	const [executionError, setExecutionError] = useState<string | null>(null)
 	const [isOpen, setIsOpen] = useState(false)
+	const [resultPanelHeight, setResultPanelHeight] = useState(
+		RESULT_PANEL_DEFAULT_HEIGHT,
+	)
+	const [isResultPanelCollapsed, setIsResultPanelCollapsed] = useState(false)
+	const [isResizingResultPanel, setIsResizingResultPanel] = useState(false)
+	const [queryHistory, setQueryHistory] = useState<QueryHistoryItem[]>(() => {
+		if (typeof window === 'undefined') {
+			return []
+		}
 
-	const { contentById } = useTabsStore()
+		try {
+			const rawHistory = window.localStorage.getItem(
+				QUERY_HISTORY_STORAGE_KEY,
+			)
+			if (!rawHistory) return []
+
+			const parsedHistory = JSON.parse(rawHistory)
+			if (!Array.isArray(parsedHistory)) return []
+
+			return parsedHistory.filter(
+				(item): item is QueryHistoryItem =>
+					typeof item === 'object' &&
+					item !== null &&
+					typeof item.query === 'string' &&
+					typeof item.savedAt === 'string',
+			)
+		} catch {
+			return []
+		}
+	})
+	const resultPanelResizeRef = useRef<{
+		startY: number
+		startHeight: number
+	} | null>(null)
+
+	const { contentById, commitContent } = useTabsStore()
+	const monacoTheme = usePreferencesStore((state) => state.monacoTheme)
+	const setMonacoTheme = usePreferencesStore((state) => state.setMonacoTheme)
+	const openSettingsShortcut = usePreferencesStore(
+		(state) => state.keybindings.openSettingsJson,
+	)
 	const activeTab = useActiveTab()
 	const connectionId = getTabConnectionId(activeTab)
+	const connections = useConnectionStore((state) => state.connections)
 	const connectionStatus = useConnectionStore((state) =>
 		connectionId ? state.statuses[connectionId] : undefined,
 	)
+	const connectionDriver =
+		connections.find((connection) => connection.id === connectionId)?.config
+			.driver ?? 'mysql'
+	const currentQuery = activeTab ? (contentById[activeTab.id] ?? '') : ''
 	const isDisconnected = connectionStatus === false
 	const tabs = [
 		{
@@ -88,15 +182,94 @@ const QueryBuilder = () => {
 			title: t('query.tab.queryPlan'),
 		},
 	]
-
 	const toggleIsOpen = () => setIsOpen((prev) => !prev)
 
 	useEffect(() => {
 		if (!isDisconnected) return
 
 		setResult(null)
+		setExecutedQuery('')
+		setExecutionError(null)
 		setCurrentTab('results')
+		setIsResultPanelCollapsed(false)
 	}, [isDisconnected])
+
+	useEffect(() => {
+		setIsResultPanelCollapsed(false)
+	}, [result])
+
+	useEffect(() => {
+		if (typeof window === 'undefined') return
+
+		const handleWindowResize = () => {
+			setResultPanelHeight((currentHeight) =>
+				clampResultPanelHeight(currentHeight),
+			)
+		}
+
+		window.addEventListener('resize', handleWindowResize)
+		return () => window.removeEventListener('resize', handleWindowResize)
+	}, [])
+
+	useEffect(() => {
+		if (!isResizingResultPanel) return
+
+		const handlePointerMove = (event: PointerEvent) => {
+			const resizeState = resultPanelResizeRef.current
+			if (!resizeState) return
+
+			const nextHeight =
+				resizeState.startHeight + (resizeState.startY - event.clientY)
+			setResultPanelHeight(clampResultPanelHeight(nextHeight))
+		}
+
+		const handlePointerUp = () => {
+			resultPanelResizeRef.current = null
+			setIsResizingResultPanel(false)
+			document.body.style.userSelect = ''
+			document.body.style.cursor = ''
+		}
+
+		document.body.style.userSelect = 'none'
+		document.body.style.cursor = 'ns-resize'
+		window.addEventListener('pointermove', handlePointerMove)
+		window.addEventListener('pointerup', handlePointerUp)
+
+		return () => {
+			window.removeEventListener('pointermove', handlePointerMove)
+			window.removeEventListener('pointerup', handlePointerUp)
+			document.body.style.userSelect = ''
+			document.body.style.cursor = ''
+		}
+	}, [isResizingResultPanel])
+
+	useEffect(() => {
+		if (typeof window === 'undefined') return
+
+		window.localStorage.setItem(
+			QUERY_HISTORY_STORAGE_KEY,
+			JSON.stringify(queryHistory),
+		)
+	}, [queryHistory])
+
+	const addQueryToHistory = (query: string) => {
+		const trimmedQuery = query.trim()
+		if (!trimmedQuery) return
+
+		setQueryHistory((previousHistory) => {
+			const dedupedHistory = previousHistory.filter(
+				(item) => item.query !== trimmedQuery,
+			)
+
+			return [
+				{
+					query: trimmedQuery,
+					savedAt: new Date().toISOString(),
+				},
+				...dedupedHistory,
+			].slice(0, MAX_QUERY_HISTORY_ITEMS)
+		})
+	}
 
 	const handleRunQuery = async (forced: boolean = false) => {
 		if (!activeTab) {
@@ -117,10 +290,12 @@ const QueryBuilder = () => {
 			return
 		}
 
+		const query = contentById[activeTab.id]
+		addQueryToHistory(query)
+
 		setIsLoading(true)
 
 		try {
-			const query = contentById[activeTab.id]
 			const { data } = await connectionService.executeQuery(
 				connectionId,
 				activeTab.database,
@@ -129,9 +304,14 @@ const QueryBuilder = () => {
 			)
 
 			setResult(data.data)
+			setExecutedQuery(query)
+			setExecutionError(null)
+			setIsResultPanelCollapsed(false)
 
 			if (data.data.rows.length === 0) {
 				setCurrentTab('execution-log')
+			} else {
+				setCurrentTab('results')
 			}
 		} catch (error) {
 			if (!forced && isDangerousQueryError(error)) {
@@ -139,143 +319,313 @@ const QueryBuilder = () => {
 				return
 			}
 
-				notifyError(error, t('errors.failedRunQuery'))
+			const errorMessage = formatErrorMessage(
+				error,
+				t('errors.failedRunQuery'),
+			)
+			notifyError(error, t('errors.failedRunQuery'))
+			setResult(null)
+			setExecutedQuery(query)
+			setExecutionError(errorMessage)
+			setCurrentTab('execution-log')
+			setIsResultPanelCollapsed(false)
 		} finally {
 			setIsLoading(false)
 		}
 	}
 
+	const handleSaveQuery = () => {
+		if (!activeTab || !currentQuery.trim()) {
+			toast.info(t('query.header.noQuery'))
+			return
+		}
+
+		try {
+			const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+			const safeTitle =
+				sanitizeFileName(activeTab.title) ||
+				sanitizeFileName(t('query.tab.results')) ||
+				'query'
+			const fileName = `${safeTitle}-${timestamp}.sql`
+			const file = new Blob([currentQuery], {
+				type: 'text/sql;charset=utf-8',
+			})
+			const url = URL.createObjectURL(file)
+
+			const link = document.createElement('a')
+			link.href = url
+			link.download = fileName
+			link.click()
+
+			URL.revokeObjectURL(url)
+
+			toast.success(t('query.header.saveSuccess', { fileName }))
+		} catch (error) {
+			notifyError(error, t('query.header.saveFailed'))
+		}
+	}
+
+	const handleFormatQuery = () => {
+		if (!activeTab || !currentQuery.trim()) {
+			toast.info(t('query.header.noQuery'))
+			return
+		}
+
+		try {
+			const formattedQuery = formatSql(currentQuery, {
+				language: getSqlFormatterLanguage(connectionDriver),
+				keywordCase: 'upper',
+			})
+
+			commitContent(activeTab.id, formattedQuery)
+			toast.success(t('query.header.formatSuccess'))
+		} catch (error) {
+			notifyError(error, t('query.header.formatFailed'))
+		}
+	}
+
+	const handleSelectHistoryQuery = (query: string) => {
+		if (!activeTab) return
+
+		commitContent(activeTab.id, query)
+		toast.success(t('query.header.historyLoaded'))
+	}
+
+	const handleStartResizeResultPanel = (
+		event: React.PointerEvent<HTMLButtonElement>,
+	) => {
+		event.preventDefault()
+		resultPanelResizeRef.current = {
+			startY: event.clientY,
+			startHeight: resultPanelHeight,
+		}
+		setIsResizingResultPanel(true)
+	}
+
 	return (
 		<div className='flex flex-col h-full min-h-0'>
-			<div className='border-b p-2 sm:p-4 space-y-2'>
-				<div className='overflow-x-auto'>
-					<div className='flex w-max min-w-full items-center gap-2 sm:gap-4'>
-						<Button
-								data-hotkey-run-query
-								onClick={() => handleRunQuery()}
-								disabled={isLoading || isDisconnected}
-								size='sm'>
-							<PlayIcon />
-							{t('query.execute')}
-						</Button>
+			<Header
+				onRunQuery={() => void handleRunQuery()}
+				onSaveQuery={handleSaveQuery}
+				onFormatQuery={handleFormatQuery}
+				onSelectHistoryQuery={handleSelectHistoryQuery}
+				isLoading={isLoading}
+				isDisconnected={isDisconnected}
+				hasQuery={Boolean(currentQuery.trim())}
+				recentQueries={queryHistory.slice(0, HISTORY_DROPDOWN_LIMIT)}
+				monacoTheme={monacoTheme}
+				onChangeMonacoTheme={(theme) => {
+					void setMonacoTheme(theme)
+				}}
+				openSettingsShortcut={openSettingsShortcut}
+			/>
 
-						<div className='w-px h-5 sm:h-6 bg-neutral-300 dark:bg-neutral-700' />
+			<div className='relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background'>
+				<SqlEditor />
 
-						<Button
-							size='icon'
-							variant='ghost'>
-							<SaveIcon />
-						</Button>
+				{(result || executionError) && (
+					<>
+						{isResultPanelCollapsed ?
+							<div className='pointer-events-none absolute inset-x-0 bottom-3 z-30 flex justify-center px-3 sm:px-4'>
+								<div className='pointer-events-auto inline-flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-full border border-border/70 bg-background/95 px-3 py-2 text-xs shadow-xl backdrop-blur sm:text-sm'>
+									{result ?
+										<>
+											<div className='flex items-center gap-2 text-muted-foreground'>
+												<TimerIcon size={14} />
+												<span className='font-mono'>
+													{formatDurationMs(
+														result.durationMs,
+													)}
+												</span>
+											</div>
 
-						<Button
-							size='icon'
-							variant='ghost'>
-							<WandSparklesIcon />
-						</Button>
+											<div className='flex items-center gap-2 text-muted-foreground'>
+												<DatabaseIcon size={14} />
+												<span className='font-mono'>
+													{formatCompactCount(
+														result.rows.length ||
+															result.affectedRows ||
+															0,
+													)}{' '}
+													{t('table.result.rows')}
+												</span>
+											</div>
+										</>
+									:	<div className='text-red-400 font-medium truncate max-w-[18rem]'>
+											{executionError}
+										</div>
+									}
 
-						<Button
-							size='icon'
-							variant='ghost'>
-							<HistoryIcon />
-						</Button>
-					</div>
-				</div>
-
-				<div className='overflow-x-auto'>
-					<SqlContextSelector />
-				</div>
-			</div>
-
-			<SqlEditor />
-
-			{result && (
-				<>
-					{/* Thanh Tabs & Stats (Đã thêm border-b để tách biệt với nội dung bên dưới) */}
-					<div className='pt-2 px-2 sm:px-4 shrink-0 border-b dark:border-slate-800 space-y-2 sm:space-y-0 sm:flex sm:items-center sm:justify-between'>
-						<div className='flex items-center gap-2 sm:gap-4 overflow-x-auto pb-1 sm:pb-0'>
-							{tabs.map((tab) => (
-								<div
-									key={tab.id}
-									className={clsx(
-										'py-2 px-3 sm:px-4 cursor-pointer transition-colors whitespace-nowrap shrink-0',
-										{
-											'border-b-2 border-primary text-primary font-bold':
-												currentTab === tab.id,
-											'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 font-semibold':
-												currentTab !== tab.id,
-										},
-									)}
-									onClick={() => setCurrentTab(tab.id)}>
-									{tab.title}
+									<Button
+										size='sm'
+										variant='outline'
+										onClick={() =>
+											setIsResultPanelCollapsed(false)
+										}>
+										<ChevronUpIcon />
+										{t('query.resultPanel.show')}
+									</Button>
 								</div>
-							))}
-						</div>
-
-							{/* Stats chỉ hiện ở tab Results */}
-							{currentTab === 'results' && (
-								<div className='flex items-center gap-3 sm:gap-4 overflow-x-auto pb-2 sm:pb-0 text-neutral-700 dark:text-neutral-400 font-mono font-medium text-xs sm:text-sm whitespace-nowrap'>
-									<div className='flex items-center gap-1.5 sm:gap-2 shrink-0'>
-										<TimerIcon size={16} />
-										<div>{formatDurationMs(result.durationMs)}</div>
-									</div>
-
-									<div className='flex items-center gap-1.5 sm:gap-2 shrink-0'>
-										<DatabaseIcon size={16} />
-										<div>
-											{formatCompactCount(
-												result.rows.length ||
-													result.affectedRows ||
-													0,
-											)} {t('table.result.rows')}
-										</div>
-									</div>
-
-								{result.isLimited && (
-									<div className='shrink-0 rounded border border-amber-300/80 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:border-amber-500/40 dark:bg-amber-900/30 dark:text-amber-300 sm:text-xs'>
-										{t('query.limitedResultSet')}
-									</div>
-								)}
-
-								{result?.rows.length > 0 && (
-									<>
-										<div className='w-px h-4 bg-neutral-300 dark:bg-neutral-700 shrink-0'></div>
-
-										<div
-											className='flex items-center gap-1.5 sm:gap-2 cursor-pointer hover:text-primary transition-colors shrink-0'
-											onClick={() => {
-												const timestamp = new Date()
-													.toISOString()
-													.replace(/[:.]/g, '-')
-												const fileName =
-													`query-result-${timestamp}`
-												exportToCsv(
-													fileName,
-													result.rows as Record<
-														string,
-														unknown
-													>[],
-												)
-												toast.success(
-													t('query.csv.exportSuccess', {
-														fileName: `${fileName}.csv`,
-													}),
-												)
-											}}>
-											<ArrowDownToLineIcon size={16} />
-											<div>{t('query.exportCsv')}</div>
-										</div>
-									</>
-								)}
 							</div>
-						)}
-					</div>
+						:	<div
+								className={clsx(
+									'absolute inset-x-0 bottom-0 z-30 flex flex-col overflow-hidden border border-border/80 border-b-0 bg-background/95 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/85 rounded-t-2xl',
+									isResizingResultPanel && 'select-none',
+								)}
+								style={{
+									height: `${resultPanelHeight}px`,
+								}}>
+								<div className='relative shrink-0 border-b border-border/70 px-3 pb-3 pt-2 sm:px-4'>
+									<div className='absolute left-1/2 top-1 -translate-x-1/2'>
+										<button
+											type='button'
+											onPointerDown={
+												handleStartResizeResultPanel
+											}
+											aria-label={t(
+												'query.resultPanel.resize',
+											)}
+											title={t(
+												'query.resultPanel.resize',
+											)}
+											className='flex h-5 w-16 cursor-ns-resize items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground'>
+											<GripHorizontalIcon size={16} />
+										</button>
+									</div>
 
-					<TabContent
-						currentTab={currentTab}
-						result={result}
-					/>
-				</>
-			)}
+									<div className='mt-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between'>
+										<div className='flex items-center gap-2 overflow-x-auto pb-1'>
+											{tabs.map((tab) => (
+												<button
+													type='button'
+													key={tab.id}
+													className={clsx(
+														'rounded-full px-3 py-1.5 text-xs font-semibold transition-colors sm:text-sm',
+														currentTab === tab.id ?
+															'bg-primary text-primary-foreground shadow-sm'
+														:	'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground',
+													)}
+													onClick={() =>
+														setCurrentTab(tab.id)
+													}>
+													{tab.title}
+												</button>
+											))}
+										</div>
+
+										<div className='flex flex-wrap items-center justify-between gap-2 lg:justify-end'>
+											<div className='flex flex-wrap items-center gap-2 text-muted-foreground font-mono text-[11px] sm:text-xs'>
+												{result && (
+													<>
+														<div className='flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1'>
+															<TimerIcon
+																size={14}
+															/>
+															<span>
+																{formatDurationMs(
+																	result.durationMs,
+																)}
+															</span>
+														</div>
+
+														<div className='flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1'>
+															<DatabaseIcon
+																size={14}
+															/>
+															<span>
+																{formatCompactCount(
+																	result.rows
+																		.length ||
+																		result.affectedRows ||
+																		0,
+																)}{' '}
+																{t(
+																	'table.result.rows',
+																)}
+															</span>
+														</div>
+													</>
+												)}
+
+												{result?.isLimited && (
+													<div className='rounded-full border border-amber-300/80 bg-amber-100 px-2.5 py-1 text-amber-800 dark:border-amber-500/40 dark:bg-amber-900/30 dark:text-amber-300'>
+														{t(
+															'query.limitedResultSet',
+														)}
+													</div>
+												)}
+											</div>
+
+											<div className='flex items-center gap-2'>
+												{result &&
+													result.rows.length > 0 && (
+														<Button
+															size='sm'
+															variant='outline'
+															onClick={() => {
+																const timestamp =
+																	new Date()
+																		.toISOString()
+																		.replace(
+																			/[:.]/g,
+																			'-',
+																		)
+																const fileName = `query-result-${timestamp}`
+																exportToCsv(
+																	fileName,
+																	result.rows as Record<
+																		string,
+																		unknown
+																	>[],
+																)
+																toast.success(
+																	t(
+																		'query.csv.exportSuccess',
+																		{
+																			fileName: `${fileName}.csv`,
+																		},
+																	),
+																)
+															}}>
+															<ArrowDownToLineIcon />
+															{t(
+																'query.exportCsv',
+															)}
+														</Button>
+													)}
+
+												<Button
+													size='sm'
+													variant='ghost'
+													onClick={() =>
+														setIsResultPanelCollapsed(
+															true,
+														)
+													}>
+													<ChevronDownIcon />
+													{t(
+														'query.resultPanel.hide',
+													)}
+												</Button>
+											</div>
+										</div>
+									</div>
+								</div>
+
+								<div className='min-h-0 flex-1'>
+									<TabContent
+										currentTab={currentTab}
+										result={result}
+										executedQuery={executedQuery}
+										connectionDriver={connectionDriver}
+										executionError={executionError}
+									/>
+								</div>
+							</div>
+						}
+					</>
+				)}
+			</div>
 
 			<ConfirmQueryDialog
 				isOpen={isOpen}
