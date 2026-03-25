@@ -10,8 +10,8 @@ import {
 } from '@/services/preferences.service'
 import type {
 	AppFontFamily,
+	AppEditorTheme,
 	AppLanguage,
-	AppMonacoTheme,
 	AppMonoFontFamily,
 	AppPreferences,
 	AppTheme,
@@ -26,7 +26,7 @@ interface PreferencesStore extends AppPreferences {
 	setLanguage: (language: AppLanguage) => Promise<void>
 	toggleLanguage: () => Promise<void>
 	setFontSize: (fontSize: number) => Promise<void>
-	setMonacoTheme: (monacoTheme: AppMonacoTheme) => Promise<void>
+	setEditorTheme: (editorTheme: AppEditorTheme) => Promise<void>
 	setKeybinding: (
 		actionId: ShortcutActionId,
 		shortcut: string,
@@ -45,7 +45,7 @@ const pickPreferences = (state: PreferencesStore): AppPreferences => ({
 	theme: state.theme,
 	language: state.language,
 	fontSize: state.fontSize,
-	monacoTheme: state.monacoTheme,
+	editorTheme: state.editorTheme,
 	keybindings: state.keybindings,
 	fontFamily: state.fontFamily,
 	monoFontFamily: state.monoFontFamily,
@@ -96,10 +96,10 @@ export const usePreferencesStore = create<PreferencesStore>((set, get) => ({
 		await savePreferences(next)
 	},
 
-	setMonacoTheme: async (monacoTheme) => {
-		const next = { ...pickPreferences(get()), monacoTheme }
+	setEditorTheme: async (editorTheme) => {
+		const next = { ...pickPreferences(get()), editorTheme }
 		applyPreferencesToDom(next)
-		set({ monacoTheme })
+		set({ editorTheme })
 		await savePreferences(next)
 	},
 

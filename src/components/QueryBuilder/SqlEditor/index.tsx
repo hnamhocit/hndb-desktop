@@ -1,14 +1,12 @@
 import { autocompletion, completeAnyWord, snippetCompletion, type Completion, type CompletionContext, type CompletionSource } from '@codemirror/autocomplete'
 import { MariaSQL, MSSQL, MySQL, PostgreSQL, SQLite, keywordCompletionSource, schemaCompletionSource, sql, type SQLConfig, type SQLDialect, type SQLNamespace } from '@codemirror/lang-sql'
 import { type Extension } from '@codemirror/state'
-import { oneDark } from '@codemirror/theme-one-dark'
 import { EditorView, keymap } from '@codemirror/view'
-import { githubLight, gruvboxDark, nord, okaidia, tokyoNight } from '@uiw/codemirror-themes-all'
 import CodeMirror, { type ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import { useEffect, useMemo, useRef } from 'react'
 
 import { useActiveTab, useDatabases, useSchema } from '@/hooks'
-import type { AppMonacoTheme } from '@/lib/monaco-theme'
+import { getCodeMirrorTheme } from '@/lib/editor-theme'
 import { useConnectionStore, usePreferencesStore, useTabsStore } from '@/stores'
 import { getTabConnectionId } from '@/utils'
 
@@ -31,16 +29,6 @@ const DIALECT_BY_DRIVER: Record<string, SQLDialect> = {
 	mariadb: MariaSQL,
 	mssql: MSSQL,
 	sqlite: SQLite,
-}
-
-const CODEMIRROR_THEME_BY_APP_THEME: Record<AppMonacoTheme, Extension> = {
-	'hndb-github-light': githubLight,
-	'hndb-one-dark': oneDark,
-	'hndb-tokyo-night': tokyoNight,
-	'hndb-gruvbox-dark': gruvboxDark,
-	'hndb-nord': nord,
-	// Closest available bundled theme for now.
-	'hndb-catppuccin-mocha': okaidia,
 }
 
 const SQLITE_UUID_DEFAULT_EXPRESSION =
@@ -412,7 +400,7 @@ export default function SqlEditor({
 	const editorRef = useRef<ReactCodeMirrorRef | null>(null)
 	const { commitContent, contentById } = useTabsStore()
 	const fontSize = usePreferencesStore((state) => state.fontSize)
-	const monacoTheme = usePreferencesStore((state) => state.monacoTheme)
+	const editorTheme = usePreferencesStore((state) => state.editorTheme)
 	const activeTab = useActiveTab()
 	const connectionId = getTabConnectionId(activeTab) ?? ''
 	const database = activeTab?.database ?? ''
@@ -450,10 +438,8 @@ export default function SqlEditor({
 	)
 
 	const codeMirrorTheme = useMemo(
-		() =>
-			CODEMIRROR_THEME_BY_APP_THEME[monacoTheme] ??
-			CODEMIRROR_THEME_BY_APP_THEME['hndb-one-dark'],
-		[monacoTheme],
+		() => getCodeMirrorTheme(editorTheme),
+		[editorTheme],
 	)
 
 	const sqlExtensions = useMemo(() => {

@@ -1,5 +1,6 @@
 'use client'
 
+import { PostgreSQL, sql } from '@codemirror/lang-sql'
 import {
 	ArrowLeftIcon,
 	CommandIcon,
@@ -13,6 +14,7 @@ import {
 	UploadIcon,
 } from 'lucide-react'
 import Editor, { type Monaco } from '@monaco-editor/react'
+import CodeMirror from '@uiw/react-codemirror'
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
@@ -29,10 +31,12 @@ import {
 	type ShortcutActionId,
 } from '@/lib/keybindings'
 import {
-	APP_MONACO_THEMES,
-	registerAppMonacoThemes,
-	type AppMonacoTheme,
-} from '@/lib/monaco-theme'
+	APP_EDITOR_THEMES,
+	APP_EDITOR_THEME_OPTIONS,
+	getCodeMirrorTheme,
+	getMonacoBuiltinTheme,
+	type AppEditorTheme,
+} from '@/lib/editor-theme'
 import {
 	APP_FONT_FAMILIES,
 	APP_LANGUAGES,
@@ -60,7 +64,7 @@ const SUPPORTED_FONT_EXTENSIONS = ['ttf', 'otf', 'woff', 'woff2'] as const
 const FONT_INPUT_ACCEPT = '.ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2'
 const SETTINGS_JSON_MODEL_URI = 'inmemory://model/hndb-preferences.json'
 const SETTINGS_JSON_SCHEMA_URI = 'inmemory://schema/hndb-preferences.schema.json'
-const MONACO_THEME_PREVIEW = `SELECT
+const SQL_THEME_PREVIEW = `SELECT
   d.department_name,
   COUNT(*) AS total_employees,
   AVG(e.birth_year) AS avg_birth_year
@@ -77,7 +81,7 @@ const SETTINGS_JSON_SCHEMA = {
 		'theme',
 		'language',
 		'fontSize',
-		'monacoTheme',
+		'editorTheme',
 		'keybindings',
 		'fontFamily',
 		'monoFontFamily',
@@ -98,9 +102,12 @@ const SETTINGS_JSON_SCHEMA = {
 			minimum: FONT_SIZE_MIN,
 			maximum: FONT_SIZE_MAX,
 		},
+		editorTheme: {
+			type: 'string',
+			enum: APP_EDITOR_THEMES,
+		},
 		monacoTheme: {
 			type: 'string',
-			enum: APP_MONACO_THEMES,
 		},
 		keybindings: {
 			type: 'object',
@@ -183,7 +190,6 @@ const readFileAsDataUrl = async (file: File): Promise<string> =>
 	})
 
 const configurePreferencesJsonSchema = (monaco: Monaco) => {
-	registerAppMonacoThemes(monaco)
 	monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
 		validate: true,
 		enableSchemaRequest: false,
@@ -209,8 +215,8 @@ export default function MeSettingsPage() {
 	const setLanguage = usePreferencesStore((state) => state.setLanguage)
 	const fontSize = usePreferencesStore((state) => state.fontSize)
 	const setFontSize = usePreferencesStore((state) => state.setFontSize)
-	const monacoTheme = usePreferencesStore((state) => state.monacoTheme)
-	const setMonacoTheme = usePreferencesStore((state) => state.setMonacoTheme)
+	const editorTheme = usePreferencesStore((state) => state.editorTheme)
+	const setEditorTheme = usePreferencesStore((state) => state.setEditorTheme)
 	const keybindings = usePreferencesStore((state) => state.keybindings)
 	const setKeybinding = usePreferencesStore((state) => state.setKeybinding)
 	const resetKeybindings = usePreferencesStore((state) => state.resetKeybindings)
@@ -246,7 +252,7 @@ export default function MeSettingsPage() {
 			theme,
 			language,
 			fontSize,
-			monacoTheme,
+			editorTheme,
 			keybindings,
 			fontFamily,
 			monoFontFamily,
@@ -257,7 +263,7 @@ export default function MeSettingsPage() {
 			theme,
 			language,
 			fontSize,
-			monacoTheme,
+			editorTheme,
 			keybindings,
 			fontFamily,
 			monoFontFamily,
@@ -341,34 +347,12 @@ export default function MeSettingsPage() {
 		return options
 	}, [t, uploadedMonoFont])
 
-	const monacoThemeOptions = useMemo(
+	const editorThemeOptions = useMemo(
 		() =>
-			[
-				{
-					value: 'hndb-github-light',
-					label: t('settings.monacoThemeOption.githubLight'),
-				},
-				{
-					value: 'hndb-one-dark',
-					label: t('settings.monacoThemeOption.oneDark'),
-				},
-				{
-					value: 'hndb-tokyo-night',
-					label: t('settings.monacoThemeOption.tokyoNight'),
-				},
-				{
-					value: 'hndb-gruvbox-dark',
-					label: t('settings.monacoThemeOption.gruvboxDark'),
-				},
-				{
-					value: 'hndb-nord',
-					label: t('settings.monacoThemeOption.nord'),
-				},
-				{
-					value: 'hndb-catppuccin-mocha',
-					label: t('settings.monacoThemeOption.catppuccinMocha'),
-				},
-			] as Array<{ value: AppMonacoTheme; label: string }>,
+			APP_EDITOR_THEME_OPTIONS.map((option) => ({
+				value: option.value,
+				label: t(option.labelKey),
+			})) as Array<{ value: AppEditorTheme; label: string }>,
 		[t],
 	)
 
@@ -889,9 +873,9 @@ export default function MeSettingsPage() {
 									{t('settings.monacoThemeHint')}
 								</div>
 								<Select
-									value={monacoTheme}
+									value={editorTheme}
 									onValueChange={(value) =>
-										void setMonacoTheme(value as AppMonacoTheme)
+										void setEditorTheme(value as AppEditorTheme)
 									}>
 									<SelectTrigger className='w-full md:max-w-sm'>
 										<SelectValue
@@ -899,7 +883,7 @@ export default function MeSettingsPage() {
 										/>
 									</SelectTrigger>
 									<SelectContent>
-										{monacoThemeOptions.map((option) => (
+										{editorThemeOptions.map((option) => (
 											<SelectItem
 												key={option.value}
 												value={option.value}>
@@ -910,23 +894,27 @@ export default function MeSettingsPage() {
 								</Select>
 
 								<div className='overflow-hidden rounded-md border'>
-									<Editor
+									<CodeMirror
 										height='220px'
-										beforeMount={registerAppMonacoThemes}
-										defaultLanguage='sql'
-										language='sql'
-										theme={monacoTheme}
-										value={MONACO_THEME_PREVIEW}
-										options={{
-											readOnly: true,
-											automaticLayout: true,
-											minimap: { enabled: false },
+										theme={getCodeMirrorTheme(editorTheme)}
+										value={SQL_THEME_PREVIEW}
+										editable={false}
+										basicSetup={{
+											foldGutter: false,
+											dropCursor: false,
+											allowMultipleSelections: false,
+											lineNumbers: true,
+										}}
+										extensions={[
+											sql({
+												dialect: PostgreSQL,
+												upperCaseKeywords: true,
+											}),
+										]}
+										className='text-sm'
+										style={{
 											fontSize,
 											fontFamily: 'var(--app-mono-font-family)',
-											fontLigatures: true,
-											scrollBeyondLastLine: false,
-											wordWrap: 'on',
-											padding: { top: 12, bottom: 12 },
 										}}
 									/>
 								</div>
@@ -1232,7 +1220,7 @@ export default function MeSettingsPage() {
 										beforeMount={configurePreferencesJsonSchema}
 										defaultLanguage='json'
 										language='json'
-										theme={monacoTheme}
+										theme={getMonacoBuiltinTheme(editorTheme)}
 										value={preferencesJsonDraft}
 										onChange={(value) =>
 											setPreferencesJsonDraft(value || '')

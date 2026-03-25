@@ -14,7 +14,7 @@ interface QueryPlanProps {
 
 const QueryPlan = ({ query, driver }: QueryPlanProps) => {
 	const { t } = useI18n()
-	const monacoTheme = usePreferencesStore((state) => state.monacoTheme)
+	const editorTheme = usePreferencesStore((state) => state.editorTheme)
 	const [planData, setPlanData] = useState<unknown | null>(null)
 	const [isLoading, setIsLoading] = useState(false)
 	const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -139,7 +139,7 @@ const QueryPlan = ({ query, driver }: QueryPlanProps) => {
 					<div className='h-full min-h-[280px] min-w-[720px]'>
 						<JsonViewer
 							data={planData}
-							theme={monacoTheme}
+							theme={editorTheme}
 						/>
 					</div>
 				</div>

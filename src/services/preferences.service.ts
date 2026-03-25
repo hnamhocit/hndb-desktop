@@ -5,9 +5,10 @@ import {
 	type AppKeybindings,
 } from '@/lib/keybindings'
 import {
-	APP_MONACO_THEMES,
-	type AppMonacoTheme,
-} from '@/lib/monaco-theme'
+	DEFAULT_EDITOR_THEME,
+	normalizeEditorTheme,
+	type AppEditorTheme,
+} from '@/lib/editor-theme'
 
 export const APP_THEMES = ['light', 'dark'] as const
 export const APP_LANGUAGES = ['en', 'vi'] as const
@@ -41,7 +42,7 @@ export type AppTheme = (typeof APP_THEMES)[number]
 export type AppLanguage = (typeof APP_LANGUAGES)[number]
 export type AppFontFamily = (typeof APP_FONT_FAMILIES)[number]
 export type AppMonoFontFamily = (typeof APP_MONO_FONT_FAMILIES)[number]
-export type { AppMonacoTheme }
+export type { AppEditorTheme }
 export type { AppKeybindings }
 
 export interface UploadedFontPreference {
@@ -54,7 +55,7 @@ export interface AppPreferences {
 	theme: AppTheme
 	language: AppLanguage
 	fontSize: number
-	monacoTheme: AppMonacoTheme
+	editorTheme: AppEditorTheme
 	keybindings: AppKeybindings
 	fontFamily: AppFontFamily
 	monoFontFamily: AppMonoFontFamily
@@ -66,7 +67,7 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
 	theme: 'light',
 	language: 'en',
 	fontSize: FONT_SIZE_DEFAULT,
-	monacoTheme: 'hndb-one-dark',
+	editorTheme: DEFAULT_EDITOR_THEME,
 	keybindings: DEFAULT_KEYBINDINGS,
 	fontFamily: DEFAULT_SANS_FONT_FAMILY,
 	monoFontFamily: DEFAULT_MONO_FONT_FAMILY,
@@ -131,10 +132,6 @@ const isAppFontFamily = (value: unknown): value is AppFontFamily =>
 const isAppMonoFontFamily = (value: unknown): value is AppMonoFontFamily =>
 	typeof value === 'string' &&
 	APP_MONO_FONT_FAMILIES.includes(value as AppMonoFontFamily)
-
-const isAppMonacoTheme = (value: unknown): value is AppMonacoTheme =>
-	typeof value === 'string' &&
-	APP_MONACO_THEMES.includes(value as AppMonacoTheme)
 
 const normalizeFontFamily = (value: unknown): AppFontFamily | null => {
 	if (value === 'humanist') return 'manrope'
@@ -216,7 +213,10 @@ const sanitizeKeybindings = (value: unknown): AppKeybindings => {
 }
 
 const sanitizePreferences = (
-	input: Partial<AppPreferences>,
+	input: Partial<AppPreferences> & {
+		editorTheme?: unknown
+		monacoTheme?: unknown
+	},
 ): AppPreferences => {
 	const nextUploadedFont = sanitizeUploadedFont(input.uploadedFont)
 	const nextUploadedMonoFont = sanitizeUploadedFont(input.uploadedMonoFont)
@@ -225,6 +225,10 @@ const sanitizePreferences = (
 	const nextMonoFontFamily =
 		normalizeMonoFontFamily(input.monoFontFamily) ??
 		DEFAULT_PREFERENCES.monoFontFamily
+	const nextEditorTheme =
+		normalizeEditorTheme(input.editorTheme) ??
+		normalizeEditorTheme(input.monacoTheme) ??
+		DEFAULT_PREFERENCES.editorTheme
 
 	return {
 		theme: isAppTheme(input.theme) ? input.theme : DEFAULT_PREFERENCES.theme,
@@ -233,10 +237,7 @@ const sanitizePreferences = (
 				input.language
 			:	DEFAULT_PREFERENCES.language,
 		fontSize: sanitizeFontSize(input.fontSize),
-		monacoTheme:
-			isAppMonacoTheme(input.monacoTheme) ?
-				input.monacoTheme
-			:	DEFAULT_PREFERENCES.monacoTheme,
+		editorTheme: nextEditorTheme,
 		keybindings: sanitizeKeybindings(input.keybindings),
 		fontFamily:
 			nextFontFamily === 'uploaded' && !nextUploadedFont ?
@@ -252,7 +253,7 @@ const sanitizePreferences = (
 }
 
 export const normalizePreferencesInput = (
-	input: Partial<AppPreferences>,
+	input: Partial<AppPreferences> & { monacoTheme?: unknown },
 ): AppPreferences => sanitizePreferences(input)
 
 const getTauriStore = async (): Promise<Store | null> => {
@@ -302,7 +303,8 @@ export const loadPreferences = async (): Promise<AppPreferences> => {
 			theme,
 			language,
 			fontSize,
-			monacoTheme,
+			editorTheme,
+			legacyMonacoTheme,
 			keybindings,
 			fontFamily,
 			monoFontFamily,
@@ -312,7 +314,8 @@ export const loadPreferences = async (): Promise<AppPreferences> => {
 			store.get<AppTheme>('theme'),
 			store.get<AppLanguage>('language'),
 			store.get<number>('fontSize'),
-			store.get<AppMonacoTheme>('monacoTheme'),
+			store.get<AppEditorTheme>('editorTheme'),
+			store.get<string>('monacoTheme'),
 			store.get<AppKeybindings>('keybindings'),
 			store.get<AppFontFamily>('fontFamily'),
 			store.get<AppMonoFontFamily>('monoFontFamily'),
@@ -323,7 +326,8 @@ export const loadPreferences = async (): Promise<AppPreferences> => {
 			theme,
 			language,
 			fontSize,
-			monacoTheme,
+			editorTheme,
+			monacoTheme: legacyMonacoTheme,
 			keybindings,
 			fontFamily,
 			monoFontFamily,
@@ -344,7 +348,7 @@ export const savePreferences = async (
 			store.set('theme', preferences.theme),
 			store.set('language', preferences.language),
 			store.set('fontSize', preferences.fontSize),
-			store.set('monacoTheme', preferences.monacoTheme),
+			store.set('editorTheme', preferences.editorTheme),
 			store.set('keybindings', preferences.keybindings),
 			store.set('fontFamily', preferences.fontFamily),
 			store.set('monoFontFamily', preferences.monoFontFamily),

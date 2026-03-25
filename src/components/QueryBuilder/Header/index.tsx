@@ -24,8 +24,11 @@ import {
 	TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { useI18n } from '@/hooks'
+import {
+	APP_EDITOR_THEME_OPTIONS,
+	type AppEditorTheme,
+} from '@/lib/editor-theme'
 import { formatShortcutForDisplay } from '@/lib/keybindings'
-import { type AppMonacoTheme } from '@/lib/monaco-theme'
 import SqlContextSelector from './SqlContextSelector'
 
 type HeaderProps = {
@@ -37,8 +40,8 @@ type HeaderProps = {
 	isDisconnected: boolean
 	hasQuery: boolean
 	recentQueries: Array<{ query: string; savedAt: string }>
-	monacoTheme: AppMonacoTheme
-	onChangeMonacoTheme: (theme: AppMonacoTheme) => void
+	editorTheme: AppEditorTheme
+	onChangeEditorTheme: (theme: AppEditorTheme) => void
 	openSettingsShortcut: string
 }
 
@@ -51,41 +54,19 @@ const Header = ({
 	isDisconnected,
 	hasQuery,
 	recentQueries,
-	monacoTheme,
-	onChangeMonacoTheme,
+	editorTheme,
+	onChangeEditorTheme,
 	openSettingsShortcut,
 }: HeaderProps) => {
 	const { t } = useI18n()
 
-	const monacoThemeOptions = [
-		{
-			value: 'hndb-github-light' as AppMonacoTheme,
-			label: t('settings.monacoThemeOption.githubLight'),
-		},
-		{
-			value: 'hndb-one-dark' as AppMonacoTheme,
-			label: t('settings.monacoThemeOption.oneDark'),
-		},
-		{
-			value: 'hndb-tokyo-night' as AppMonacoTheme,
-			label: t('settings.monacoThemeOption.tokyoNight'),
-		},
-		{
-			value: 'hndb-gruvbox-dark' as AppMonacoTheme,
-			label: t('settings.monacoThemeOption.gruvboxDark'),
-		},
-		{
-			value: 'hndb-nord' as AppMonacoTheme,
-			label: t('settings.monacoThemeOption.nord'),
-		},
-		{
-			value: 'hndb-catppuccin-mocha' as AppMonacoTheme,
-			label: t('settings.monacoThemeOption.catppuccinMocha'),
-		},
-	]
+	const editorThemeOptions = APP_EDITOR_THEME_OPTIONS.map((option) => ({
+		value: option.value,
+		label: t(option.labelKey),
+	}))
 
 	const activeMonacoThemeLabel =
-		monacoThemeOptions.find((option) => option.value === monacoTheme)
+		editorThemeOptions.find((option) => option.value === editorTheme)
 			?.label ?? t('query.monacoTheme.quickPicker')
 
 	return (
@@ -206,11 +187,11 @@ const Header = ({
 							</div>
 							<DropdownMenuSeparator />
 							<DropdownMenuRadioGroup
-								value={monacoTheme}
+								value={editorTheme}
 								onValueChange={(value) =>
-									onChangeMonacoTheme(value as AppMonacoTheme)
+									onChangeEditorTheme(value as AppEditorTheme)
 								}>
-								{monacoThemeOptions.map((option) => (
+								{editorThemeOptions.map((option) => (
 									<DropdownMenuRadioItem
 										key={option.value}
 										value={option.value}>

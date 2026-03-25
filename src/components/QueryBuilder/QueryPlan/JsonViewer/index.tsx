@@ -2,14 +2,14 @@ import Editor from '@monaco-editor/react'
 import { useMemo } from 'react'
 
 import {
-	registerAppMonacoThemes,
-	type AppMonacoTheme,
-} from '@/lib/monaco-theme'
+	getMonacoBuiltinTheme,
+	type AppEditorTheme,
+} from '@/lib/editor-theme'
 import { usePreferencesStore } from '@/stores'
 
 interface JsonViewerProps {
 	data: unknown
-	theme: AppMonacoTheme
+	theme: AppEditorTheme
 }
 
 const stringifyJsonData = (data: unknown) => {
@@ -30,9 +30,8 @@ const JsonViewer = ({ data, theme }: JsonViewerProps) => {
 			<Editor
 				key={`query-plan-json-${theme}`}
 				height='100%'
-				beforeMount={registerAppMonacoThemes}
 				language='json'
-				theme={theme}
+				theme={getMonacoBuiltinTheme(theme)}
 				value={value}
 				onMount={(editor) => {
 					editor.layout()

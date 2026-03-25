@@ -161,8 +161,8 @@ const QueryBuilder = () => {
 
 	const { contentById, commitContent } = useTabsStore()
 	const { triggerRefresh } = useMetadataStore()
-	const monacoTheme = usePreferencesStore((state) => state.monacoTheme)
-	const setMonacoTheme = usePreferencesStore((state) => state.setMonacoTheme)
+	const editorTheme = usePreferencesStore((state) => state.editorTheme)
+	const setEditorTheme = usePreferencesStore((state) => state.setEditorTheme)
 	const openSettingsShortcut = usePreferencesStore(
 		(state) => state.keybindings.openSettingsJson,
 	)
@@ -460,9 +460,9 @@ const QueryBuilder = () => {
 				isDisconnected={isDisconnected}
 				hasQuery={Boolean(currentQuery.trim())}
 				recentQueries={queryHistory.slice(0, HISTORY_DROPDOWN_LIMIT)}
-				monacoTheme={monacoTheme}
-				onChangeMonacoTheme={(theme) => {
-					void setMonacoTheme(theme)
+				editorTheme={editorTheme}
+				onChangeEditorTheme={(theme) => {
+					void setEditorTheme(theme)
 				}}
 				openSettingsShortcut={openSettingsShortcut}
 			/>

@@ -153,8 +153,8 @@ export const messages = {
 		vi: 'Theme editor',
 	},
 	'settings.monacoThemeHint': {
-		en: 'Choose one Monaco theme for SQL editor, query plan, and JSON editors across the app.',
-		vi: 'Chọn một theme Monaco dùng chung cho SQL editor, kế hoạch truy vấn và các JSON editor trong toàn app.',
+		en: 'Choose one editor theme package for the SQL editor and viewer surfaces across the app.',
+		vi: 'Chọn một gói theme editor cho SQL editor và các khung hiển thị trong toàn app.',
 	},
 	'settings.selectMonacoTheme': {
 		en: 'Select an editor theme',
@@ -507,9 +507,9 @@ export const messages = {
 		en: 'Nord',
 		vi: 'Nord',
 	},
-	'settings.monacoThemeOption.catppuccinMocha': {
-		en: 'Catppuccin Mocha',
-		vi: 'Catppuccin Mocha',
+	'settings.monacoThemeOption.okaidia': {
+		en: 'Okaidia',
+		vi: 'Okaidia',
 	},
 	'settings.forgotPassword': { en: 'Forgot password', vi: 'Quên mật khẩu' },
 	'settings.sendResetLink': {
@@ -1160,8 +1160,8 @@ export const messages = {
 		vi: 'Theme editor',
 	},
 	'query.monacoTheme.quickHint': {
-		en: 'Applies to all Monaco editors in the app.',
-		vi: 'Áp dụng cho toàn bộ Monaco editor trong app.',
+		en: 'Applies to the SQL editor and viewer appearance across the app.',
+		vi: 'Áp dụng cho SQL editor và giao diện hiển thị trong toàn app.',
 	},
 	'query.plan.loading': {
 		en: 'Loading Query Plan...',
