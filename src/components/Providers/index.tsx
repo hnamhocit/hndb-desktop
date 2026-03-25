@@ -2,38 +2,50 @@
 
 import type { User } from '@supabase/supabase-js'
 import { listen } from '@tauri-apps/api/event'
-import { Loader2Icon } from 'lucide-react'
 import { ReactNode, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 
 import { useI18n } from '@/hooks'
-import { connectionService, userService } from '@/services'
-import { useConnectionStore, usePreferencesStore, useUserStore } from '@/stores'
+import { connectionService, formatReleaseDate, userService } from '@/services'
+import {
+	useAppStore,
+	useConnectionStore,
+	usePreferencesStore,
+	useUserStore,
+} from '@/stores'
 import { isDesktopOAuthCallbackUrl, supabaseClient } from '@/utils/supabase'
 
 export default function Providers({ children }: { children: ReactNode }) {
 	// ✅ SỬ DỤNG SELECTORS: Đảm bảo các hàm (actions) có tham chiếu ổn định, không gây loop
-	const isLoading = useUserStore((state) => state.isLoading)
 	const setUser = useUserStore((state) => state.setUser)
 	const setIsLoading = useUserStore((state) => state.setIsLoading)
 
 	const setConnections = useConnectionStore((state) => state.setConnections)
 	const setBulkStatuses = useConnectionStore((state) => state.setBulkStatuses)
 
+	const initializeApp = useAppStore((state) => state.initialize)
+	const checkForUpdates = useAppStore((state) => state.checkForUpdates)
+
 	const initializePreferences = usePreferencesStore((state) => state.initialize)
 
-	const { t } = useI18n()
+	const { t, language } = useI18n()
 
 	const initialized = useRef(false)
 	const deepLinkSubscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
 	const eventUnlistenRef = useRef<(() => void) | null>(null)
 	const handledDeepLinkUrlsRef = useRef(new Set<string>())
 	const statusPollingRef = useRef<number | null>(null)
+	const notifiedReleaseTagRef = useRef<string | null>(null)
+	const localeRef = useRef({ t, language })
 
 	// Khởi tạo Preferences riêng biệt
 	useEffect(() => {
 		void initializePreferences()
 	}, [initializePreferences])
+
+	useEffect(() => {
+		localeRef.current = { t, language }
+	}, [language, t])
 
 	useEffect(() => {
 		// Chống chạy 2 lần trong Strict Mode
@@ -84,6 +96,28 @@ export default function Providers({ children }: { children: ReactNode }) {
 				console.error('Fetch user error:', err)
 				setUser(mapAuthUserToStoreUser(authUser))
 			}
+		}
+
+		const notifyIfUpdateAvailable = async () => {
+			const result = await checkForUpdates()
+			if (!result?.hasUpdate || !result.latestRelease) {
+				return
+			}
+
+			if (notifiedReleaseTagRef.current === result.latestRelease.tagName) {
+				return
+			}
+
+			notifiedReleaseTagRef.current = result.latestRelease.tagName
+			toast.info(
+				localeRef.current.t('updates.toastAvailable', {
+					version: result.latestRelease.version,
+					date: formatReleaseDate(
+						result.latestRelease.publishedAt,
+						localeRef.current.language,
+					),
+				}),
+			)
 		}
 
 		const processDeepLinkUrl = async (url: string) => {
@@ -147,6 +181,8 @@ export default function Providers({ children }: { children: ReactNode }) {
 		const initAuth = async () => {
 			setIsLoading(true)
 			try {
+				await initializeApp()
+
 				// Reset và load connections
 				await connectionService.resetSessions()
 				const connections = await connectionService.list()
@@ -158,8 +194,12 @@ export default function Providers({ children }: { children: ReactNode }) {
 				// Setup Deep Link & Session
 				await setupDesktopDeepLink()
 				const { data: { session } } = await supabaseClient.auth.getSession()
-				if (session?.user) await fetchUser(session.user)
-				else setUser(null)
+				if (session?.user) {
+					await fetchUser(session.user)
+					await notifyIfUpdateAvailable()
+				} else {
+					setUser(null)
+				}
 			} catch (err) {
 				console.error('Init auth error:', err)
 				setUser(null)
@@ -183,7 +223,10 @@ export default function Providers({ children }: { children: ReactNode }) {
 
 		// Auth Listener
 		const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((event, session) => {
-			if (event === 'SIGNED_IN' && session?.user) fetchUser(session.user)
+			if (event === 'SIGNED_IN' && session?.user) {
+				void fetchUser(session.user)
+				void notifyIfUpdateAvailable()
+			}
 			else if (event === 'SIGNED_OUT') setUser(null)
 		})
 
@@ -196,15 +239,14 @@ export default function Providers({ children }: { children: ReactNode }) {
 			initialized.current = false
 		}
 		// ✅ CHỈ ĐƯA CÁC HÀM ỔN ĐỊNH VÀO DEPENDENCY: Bỏ 't' để tránh vòng lặp
-	}, [setBulkStatuses, setConnections, setIsLoading, setUser])
-
-	if (isLoading) {
-		return (
-			<div className='flex min-h-screen items-center justify-center'>
-				<Loader2Icon className='animate-spin text-primary' size={64} />
-			</div>
-		)
-	}
+	}, [
+		checkForUpdates,
+		initializeApp,
+		setBulkStatuses,
+		setConnections,
+		setIsLoading,
+		setUser,
+	])
 
 	return children
 }

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 
 import { ITab } from '@/interfaces'
+import { getTabConnectionId } from '@/utils'
 import { useActiveStore } from './active.store'
 
 type ContentById = Record<string, string>
@@ -17,6 +18,19 @@ type TabsState = {
 	commitContent: (id: string, content: string) => void
 
 	removeTab: (id: string) => void
+	removeTabsByConnection: (connectionId: string) => void
+}
+
+const syncActiveSelection = (tabs: ITab[], activeTabId: string | null) => {
+	const nextActiveTab =
+		(activeTabId ? tabs.find((tab) => tab.id === activeTabId) : null) ?? null
+
+	useActiveStore.setState({
+		activeTabId,
+		connectionId: getTabConnectionId(nextActiveTab),
+		database: nextActiveTab?.database ?? null,
+		table: nextActiveTab?.table ?? null,
+	})
 }
 
 export const useTabsStore = create<TabsState>()(
@@ -24,7 +38,26 @@ export const useTabsStore = create<TabsState>()(
 		(set) => ({
 			tabs: [],
 
-			setTabs: (tabs) => set({ tabs }),
+			setTabs: (tabs) =>
+				set(() => {
+					if (tabs.length === 0) {
+						syncActiveSelection([], null)
+						return { tabs: [] }
+					}
+
+					const currentActiveTabId = useActiveStore.getState().activeTabId
+					if (
+						currentActiveTabId &&
+						!tabs.some((tab) => tab.id === currentActiveTabId)
+					) {
+						syncActiveSelection(
+							tabs,
+							tabs[tabs.length - 1]?.id ?? null,
+						)
+					}
+
+					return { tabs }
+				}),
 
 			addTab: (tab) =>
 				set((state) => ({
@@ -72,10 +105,49 @@ export const useTabsStore = create<TabsState>()(
 						}
 					}
 
-					useActiveStore.setState({ activeTabId: newActiveTabId })
+					syncActiveSelection(newTabs, newActiveTabId)
 
 					return {
 						tabs: newTabs,
+						contentById: nextContentById,
+					}
+				}),
+
+			removeTabsByConnection: (connectionId) =>
+				set((state) => {
+					const tabIdsToRemove = new Set(
+						state.tabs
+							.filter(
+								(tab) => getTabConnectionId(tab) === connectionId,
+							)
+							.map((tab) => tab.id),
+					)
+
+					if (tabIdsToRemove.size === 0) {
+						return {}
+					}
+
+					const nextTabs = state.tabs.filter(
+						(tab) => !tabIdsToRemove.has(tab.id),
+					)
+					const nextContentById = Object.fromEntries(
+						Object.entries(state.contentById).filter(
+							([tabId]) => !tabIdsToRemove.has(tabId),
+						),
+					)
+
+					const currentActiveTabId = useActiveStore.getState().activeTabId
+					const nextActiveTabId =
+						currentActiveTabId &&
+						!tabIdsToRemove.has(currentActiveTabId) &&
+						nextTabs.some((tab) => tab.id === currentActiveTabId) ?
+							currentActiveTabId
+						:	(nextTabs[nextTabs.length - 1]?.id ?? null)
+
+					syncActiveSelection(nextTabs, nextActiveTabId)
+
+					return {
+						tabs: nextTabs,
 						contentById: nextContentById,
 					}
 				}),

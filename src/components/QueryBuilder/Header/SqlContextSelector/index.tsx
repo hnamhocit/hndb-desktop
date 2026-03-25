@@ -41,7 +41,6 @@ export default function SqlContextSelector() {
 		activeConnectionId,
 		{
 			autoFetch: true,
-			showAllOverride: true,
 		},
 	)
 	const isAutoConnecting = connectingId === activeConnectionId

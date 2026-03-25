@@ -21,6 +21,8 @@ import { connectionService } from '@/services'
 import {
 	useActiveStore,
 	useConnectionStore,
+	useDataEditorStore,
+	useMetadataStore,
 	useTabsStore,
 } from '@/stores'
 import { formatErrorMessage, notifyError } from '@/utils'
@@ -115,6 +117,12 @@ const useDataSourceDialogForm = ({
 
 	const { connections, setConnections, updateStatus } = useConnectionStore()
 	const { updateTab } = useTabsStore()
+	const clearConnectionMetadata = useMetadataStore(
+		(state) => state.clearConnectionMetadata,
+	)
+	const clearConnectionTables = useDataEditorStore(
+		(state) => state.clearConnectionTables,
+	)
 	const {
 		activeTabId,
 		setConnectionId,
@@ -524,15 +532,23 @@ const useDataSourceDialogForm = ({
 		}
 
 		try {
+			const runtimeConfig = buildConnectionConfig(formData)
+
 			if (isEditMode && dataSourceId) {
 				const overrides = buildOverrides(formData.driverProperties || [])
+				const nextDataSource = buildConnectedDataSource(
+					dataSourceId,
+					formData,
+				)
 
 				const { error } = await connectionService.update(
 					dataSourceId,
 					{
 						connectionName: formData.name,
-						config: buildConnectionConfig(formData),
+						config: runtimeConfig,
 						overrides,
+						savePassword: formData.savePassword,
+						showAllDatabases: formData.showAllDatabases,
 					},
 				)
 
@@ -543,6 +559,8 @@ const useDataSourceDialogForm = ({
 				}
 
 				updateStatus(dataSourceId, true)
+				clearConnectionMetadata(dataSourceId)
+				clearConnectionTables(dataSourceId)
 
 				setConnections(
 					connections.map((dataSource) => {
@@ -550,16 +568,11 @@ const useDataSourceDialogForm = ({
 							return dataSource
 						}
 
-						const { name, type, ...configData } = formData
-
 						return {
 							...dataSource,
-							name,
-							type,
-							config: {
-								...dataSource.config,
-								...configData,
-							},
+							...nextDataSource,
+							id: dataSourceId,
+							created_at: dataSource.created_at,
 						}
 					}),
 				)
@@ -572,8 +585,10 @@ const useDataSourceDialogForm = ({
 
 				const connectionId = await invoke<string>('save_and_connect', {
 					connectionName: formData.name,
-					config: buildConnectionConfig(formData),
+					config: runtimeConfig,
 					overrides,
+					savePassword: formData.savePassword,
+					showAllDatabases: formData.showAllDatabases,
 				})
 
 				const nextDataSource = buildConnectedDataSource(

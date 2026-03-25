@@ -181,9 +181,13 @@ export const connectionService = {
 		return invoke<void>('rename_connection', { connectionId, newName })
 	},
 
-	async getDatabases(connectionId: string, _showAll: boolean) {
+	async getDatabases(
+		connectionId: string,
+		showAllDatabases?: boolean | null,
+	) {
 		const databases = await invoke<string[]>('list_databases', {
 			id: connectionId,
+			showAllDatabases,
 		})
 		syncConnectionStatusesInBackground()
 
@@ -253,6 +257,8 @@ export const connectionService = {
 			connectionName: string
 			config: ConnectionConfigPayload
 			overrides: Record<string, string>
+			savePassword: boolean
+			showAllDatabases: boolean
 		},
 	) {
 		return invoke<void>('update_connection', {
@@ -260,6 +266,8 @@ export const connectionService = {
 			connectionName: payload.connectionName,
 			config: payload.config,
 			overrides: payload.overrides,
+			savePassword: payload.savePassword,
+			showAllDatabases: payload.showAllDatabases,
 		})
 			.then(() => ({ error: null }))
 			.catch((error: unknown) => ({

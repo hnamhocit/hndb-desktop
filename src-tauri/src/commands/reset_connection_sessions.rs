@@ -29,5 +29,8 @@ pub async fn reset_connection_sessions(state: tauri::State<'_, AppState>) -> Res
     let mut manually_disconnected = state.manually_disconnected_connections.lock().await;
     manually_disconnected.clear();
 
+    let mut session_passwords = state.session_connection_passwords.lock().await;
+    session_passwords.clear();
+
     Ok(())
 }

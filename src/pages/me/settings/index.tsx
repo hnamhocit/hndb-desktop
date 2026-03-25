@@ -54,7 +54,7 @@ import {
 	SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { usePreferencesStore, useUserStore } from '@/stores'
+import { useAppStore, usePreferencesStore, useUserStore } from '@/stores'
 
 const SUPPORTED_FONT_EXTENSIONS = ['ttf', 'otf', 'woff', 'woff2'] as const
 const FONT_INPUT_ACCEPT = '.ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2'
@@ -202,9 +202,10 @@ export default function MeSettingsPage() {
 	type SettingsTabValue = 'profile' | 'preferences' | 'shortcuts' | 'config'
 	const [searchParams, setSearchParams] = useSearchParams()
 	const { user } = useUserStore()
+	const app = useAppStore((state) => state.app)
+	const initializeApp = useAppStore((state) => state.initialize)
 	const theme = usePreferencesStore((state) => state.theme)
 	const toggleTheme = usePreferencesStore((state) => state.toggleTheme)
-	const language = usePreferencesStore((state) => state.language)
 	const setLanguage = usePreferencesStore((state) => state.setLanguage)
 	const fontSize = usePreferencesStore((state) => state.fontSize)
 	const setFontSize = usePreferencesStore((state) => state.setFontSize)
@@ -224,7 +225,7 @@ export default function MeSettingsPage() {
 		(state) => state.setUploadedMonoFont,
 	)
 	const setPreferences = usePreferencesStore((state) => state.setPreferences)
-	const { t } = useI18n()
+	const { t, language } = useI18n()
 	const uploadedNormalInputRef = useRef<HTMLInputElement | null>(null)
 	const uploadedMonoInputRef = useRef<HTMLInputElement | null>(null)
 	const [settingsForm, setSettingsForm] = useState({
@@ -284,6 +285,10 @@ export default function MeSettingsPage() {
 			setSettingsTab(requestedTab)
 		}
 	}, [searchParams])
+
+	useEffect(() => {
+		void initializeApp()
+	}, [initializeApp])
 
 	useEffect(() => {
 		setFontSizeInput(String(fontSize))
@@ -625,6 +630,9 @@ export default function MeSettingsPage() {
 					</h1>
 					<p className='mt-2 text-sm text-muted-foreground'>
 						{t('settings.subtitle')}
+					</p>
+					<p className='mt-3 text-xs font-mono text-muted-foreground'>
+						{app.name} v{app.version}
 					</p>
 				</div>
 
@@ -1244,6 +1252,7 @@ export default function MeSettingsPage() {
 								</div>
 						</div>
 					</TabsContent>
+
 				</Tabs>
 			</div>
 		</div>

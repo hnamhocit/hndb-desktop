@@ -11,7 +11,14 @@ import {
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/hooks'
 import { connectionService } from '@/services'
-import { useConnectionStore, useContextMenuStore } from '@/stores'
+import {
+	useActiveStore,
+	useConnectionStore,
+	useContextMenuStore,
+	useDataEditorStore,
+	useMetadataStore,
+	useTabsStore,
+} from '@/stores'
 import { notifyError } from '@/utils'
 
 interface DeleteDialogProps {
@@ -23,6 +30,15 @@ const DeleteDialog = ({ id }: DeleteDialogProps) => {
 	const { target, setIsSubmitting, isSubmitting, actionType, closeAction } =
 		useContextMenuStore()
 	const { connections, setConnections, clearStatus } = useConnectionStore()
+	const clearConnectionMetadata = useMetadataStore(
+		(state) => state.clearConnectionMetadata,
+	)
+	const clearConnectionTables = useDataEditorStore(
+		(state) => state.clearConnectionTables,
+	)
+	const removeTabsByConnection = useTabsStore(
+		(state) => state.removeTabsByConnection,
+	)
 
 	const isOpen =
 		target?.dataSourceId === id &&
@@ -35,9 +51,24 @@ const DeleteDialog = ({ id }: DeleteDialogProps) => {
 		try {
 			await connectionService.delete(id)
 
-			toast.success(t('connection.toast.deleted'))
-			setConnections(connections.filter((ds) => ds.id !== id))
+			const nextConnections = connections.filter((ds) => ds.id !== id)
+			removeTabsByConnection(id)
+			clearConnectionMetadata(id)
+			clearConnectionTables(id)
+			setConnections(nextConnections)
 			clearStatus(id)
+
+			const activeState = useActiveStore.getState()
+			if (activeState.connectionId === id) {
+				useActiveStore.setState({
+					connectionId:
+						nextConnections[nextConnections.length - 1]?.id ?? null,
+					database: null,
+					table: null,
+				})
+			}
+
+			toast.success(t('connection.toast.deleted'))
 		} catch (error) {
 			notifyError(error, t('errors.failedDeleteDataSource'))
 		} finally {

@@ -25,6 +25,7 @@ interface GlobalDataEditorState {
 	) => void
 	addEmptyRow: (tablePath: string) => void
 	discardTableChanges: (tablePath: string) => void
+	clearConnectionTables: (connectionId: string) => void
 
 	toggleDeleteChangeset: (tablePath: string, id: string | number) => void
 	toggleRowSelection: (tablePath: string, id: string | number) => void
@@ -88,6 +89,19 @@ export const useDataEditorStore = create<GlobalDataEditorState>((set) => ({
 
 				table.insertChangeset[tempId] = {}
 				table.newRowIds.unshift(tempId)
+			}),
+		),
+
+	clearConnectionTables: (connectionId) =>
+		set(
+			produce((state: GlobalDataEditorState) => {
+				const tablePrefix = `/data_sources/${connectionId}/`
+
+				for (const tablePath of Object.keys(state.tablesState)) {
+					if (tablePath.startsWith(tablePrefix)) {
+						delete state.tablesState[tablePath]
+					}
+				}
 			}),
 		),
 

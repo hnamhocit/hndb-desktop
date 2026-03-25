@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { getConnectionShowAllDatabases } from '@/interfaces'
 import { connectionService } from '@/services'
 import { useConnectionStore, useMetadataStore } from '@/stores'
 import { formatErrorMessage, notifyError } from '@/utils'
@@ -27,6 +28,9 @@ export const useDatabases = (
 	const connectionStatus = useConnectionStore(
 		(state) => state.statuses[dataSourceId],
 	)
+	const connection = useConnectionStore((state) =>
+		state.connections.find((item) => item.id === dataSourceId),
+	)
 	const {
 		databases: cachedDatabases,
 		setDatabases,
@@ -35,7 +39,8 @@ export const useDatabases = (
 	const cached =
 		hasValidDataSourceId ? cachedDatabases[dataSourceId] : undefined
 	const hasCachedDatabases = cached !== undefined
-	const showAllDatabases = showAllOverride ?? false
+	const showAllDatabases =
+		showAllOverride ?? getConnectionShowAllDatabases(connection)
 	const isDisconnected = connectionStatus === false
 
 	const databases = cached ?? []

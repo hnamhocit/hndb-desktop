@@ -1,4 +1,4 @@
-use super::{build_conn_str, get_config_by_id, override_database};
+use super::{build_conn_str, get_runtime_config_by_id, override_database};
 use crate::db_client::DbClient;
 use crate::state::AppState;
 
@@ -31,7 +31,7 @@ pub async fn get_or_create_active_connection(
         return Ok(client);
     }
 
-    let config = get_config_by_id(app, id)?;
+    let config = get_runtime_config_by_id(app, id, state).await?;
     let conn_str = build_conn_str(&config)?;
     let client = DbClient::connect(&config.driver, &conn_str).await?;
 
@@ -61,7 +61,7 @@ pub async fn get_or_create_database_connection(
         return Ok(client);
     }
 
-    let config = get_config_by_id(app, id)?;
+    let config = get_runtime_config_by_id(app, id, state).await?;
     let effective_config = override_database(&config, Some(database))?;
     let conn_str = build_conn_str(&effective_config)?;
     let client = DbClient::connect(&effective_config.driver, &conn_str).await?;

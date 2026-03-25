@@ -1,4 +1,8 @@
-import type { IConnection } from '@/interfaces'
+import {
+	type IConnection,
+	getConnectionSavePassword,
+	getConnectionShowAllDatabases,
+} from '@/interfaces'
 import type { TranslationKey } from '@/i18n/messages'
 import type {
 	DataSourceFormData,
@@ -80,14 +84,16 @@ export const mapDataSourceToFormData = (
 	const baseFormData = {
 		name: dataSource.name,
 		type: dataSource.config.driver,
-		savePassword: true,
-		showAllDatabases: true,
+		savePassword: getConnectionSavePassword(dataSource),
+		showAllDatabases: getConnectionShowAllDatabases(dataSource),
 		driverProperties: normalizeDriverProperties(
 			dataSource.setting_overrides,
 		),
 		username: mode.type === 'fields' ? mode.username || '' : '',
 		password:
-			mode.type === 'fields' ? (mode.password || '') : '',
+			mode.type === 'fields' ?
+				(mode.password || dataSource.session_password || '')
+			:	'',
 	}
 
 	if (mode.type === 'url') {
@@ -222,6 +228,12 @@ export const buildConnectedDataSource = (
 					},
 				},
 		setting_overrides: driverProperties,
+		save_password: formData.savePassword,
+		show_all_databases: formData.showAllDatabases,
+		session_password:
+			formData.method === 'host' && !formData.savePassword ?
+				(formData.password ?? '')
+			:	undefined,
 		created_at: createdAt,
 	}
 }

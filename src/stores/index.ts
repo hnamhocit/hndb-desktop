@@ -1,4 +1,5 @@
 export * from './active.store'
+export * from './app.store'
 export * from './connection.store'
 export * from './contextMenu.store'
 export * from './dataEditor.store'

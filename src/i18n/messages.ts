@@ -323,9 +323,69 @@ export const messages = {
 		en: 'Config JSON',
 		vi: 'Config JSON',
 	},
+	'settings.aboutTab': {
+		en: 'About',
+		vi: 'About',
+	},
 	'settings.openConfigEditor': {
 		en: 'Open JSON editor',
 		vi: 'Mở JSON editor',
+	},
+	'settings.aboutTitle': {
+		en: 'About this app',
+		vi: 'Thông tin ứng dụng',
+	},
+	'settings.aboutHint': {
+		en: 'Version details, release metadata, repository links, and update status.',
+		vi: 'Chi tiết phiên bản, metadata release, liên kết repository và trạng thái cập nhật.',
+	},
+	'settings.aboutVersion': {
+		en: 'Installed version',
+		vi: 'Phiên bản đang dùng',
+	},
+	'settings.aboutReleaseDate': {
+		en: 'Release date',
+		vi: 'Ngày phát hành',
+	},
+	'settings.aboutReleaseDateUnknown': {
+		en: 'Release date unavailable',
+		vi: 'Chưa có ngày phát hành',
+	},
+	'settings.aboutLatestRelease': {
+		en: 'Latest release',
+		vi: 'Bản phát hành mới nhất',
+	},
+	'settings.aboutLatestReleaseHint': {
+		en: 'Check updates to load the newest GitHub release metadata.',
+		vi: 'Bấm kiểm tra cập nhật để tải metadata release mới nhất từ GitHub.',
+	},
+	'settings.aboutUpdateStatus': {
+		en: 'Update status',
+		vi: 'Trạng thái cập nhật',
+	},
+	'settings.aboutCheckedAt': {
+		en: 'Last checked on {{date}}.',
+		vi: 'Kiểm tra lần cuối vào {{date}}.',
+	},
+	'settings.aboutNotCheckedYet': {
+		en: 'Update check has not run yet.',
+		vi: 'Chưa kiểm tra cập nhật.',
+	},
+	'settings.aboutOpenRepository': {
+		en: 'Open repository',
+		vi: 'Mở repository',
+	},
+	'settings.aboutOpenReleases': {
+		en: 'Open releases',
+		vi: 'Mở releases',
+	},
+	'settings.aboutTechStack': {
+		en: 'Technology stack',
+		vi: 'Công nghệ sử dụng',
+	},
+	'settings.aboutTechStackHint': {
+		en: 'A quick overview of the main technologies behind HNDB.',
+		vi: 'Tổng quan nhanh các công nghệ chính đang chạy HNDB.',
 	},
 	'settings.configEditorTitle': {
 		en: 'Preferences JSON Editor',
@@ -478,6 +538,38 @@ export const messages = {
 	'settings.toastDeletePending': {
 		en: 'UI only: Delete account flow will be connected later.',
 		vi: 'Mới chỉ có giao diện: luồng xóa tài khoản sẽ được kết nối sau.',
+	},
+	'updates.checkButton': {
+		en: 'Check update',
+		vi: 'Kiểm tra cập nhật',
+	},
+	'updates.availableLabel': {
+		en: 'Update available: v{{version}}',
+		vi: 'Có bản mới: v{{version}}',
+	},
+	'updates.noUpdateLabel': {
+		en: 'You are on the latest version.',
+		vi: 'Bạn đang ở bản mới nhất.',
+	},
+	'updates.downloadButton': {
+		en: 'Download v{{version}}',
+		vi: 'Tải v{{version}}',
+	},
+	'updates.upToDate': {
+		en: 'You are already on the latest version (v{{version}}).',
+		vi: 'Bạn đang dùng bản mới nhất (v{{version}}).',
+	},
+	'updates.checkFailed': {
+		en: 'Failed to check updates.',
+		vi: 'Không thể kiểm tra cập nhật.',
+	},
+	'updates.openReleaseFailed': {
+		en: 'Failed to open the release page.',
+		vi: 'Không thể mở trang release.',
+	},
+	'updates.toastAvailable': {
+		en: 'A newer version v{{version}} is available. Published on {{date}}.',
+		vi: 'Có phiên bản mới v{{version}}. Phát hành ngày {{date}}.',
 	},
 
 	'home.greetingMorning': { en: 'Good morning', vi: 'Chào buổi sáng' },

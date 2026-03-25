@@ -1,6 +1,6 @@
 use crate::db_client::DbClient;
 use crate::helpers::build_conn_str;
-use crate::helpers::get_config_by_id;
+use crate::helpers::get_runtime_config_by_id;
 use crate::state::AppState;
 
 #[tauri::command]
@@ -9,7 +9,7 @@ pub async fn connect_session(
     app: tauri::AppHandle,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), String> {
-    let config = get_config_by_id(&app, id.as_str())?;
+    let config = get_runtime_config_by_id(&app, id.as_str(), &state).await?;
 
     let conn_str = build_conn_str(&config)?;
     let client = DbClient::connect(&config.driver, &conn_str).await?;

@@ -7,4 +7,5 @@ pub struct AppState {
     pub active_connections: Mutex<HashMap<String, DbClient>>,
     pub active_database_connections: Mutex<HashMap<String, DbClient>>,
     pub manually_disconnected_connections: Mutex<HashSet<String>>,
+    pub session_connection_passwords: Mutex<HashMap<String, String>>,
 }

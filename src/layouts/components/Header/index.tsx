@@ -1,15 +1,20 @@
 'use client'
 
 import {
+	DownloadIcon,
+	InfoIcon,
+	LogInIcon,
 	LogOutIcon,
 	MoonIcon,
 	PanelLeftIcon,
+	RefreshCwIcon,
 	SettingsIcon,
 	SunIcon,
 } from 'lucide-react'
 import { motion } from 'motion/react'
+import { openUrl } from '@tauri-apps/plugin-opener'
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -21,15 +26,16 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useI18n } from '@/hooks'
-import { authService } from '@/services'
 import {
-	useActiveStore,
-	useConnectionStore,
-	useDataEditorStore,
-	useMetadataStore,
+	APP_RELEASES_URL,
+	authService,
+	formatReleaseDate,
+} from '@/services'
+import {
+	useAppStore,
 	usePreferencesStore,
-	useTabsStore,
 	useUserStore,
 } from '@/stores'
 import DataSourceSearch from './DataSourceSearch'
@@ -43,13 +49,23 @@ const toolbarButtonClass =
 	'inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors'
 
 const Header = ({ onToggleSidebar }: HeaderProps) => {
-	const { user, setUser } = useUserStore()
+	const navigate = useNavigate()
+	const user = useUserStore((state) => state.user)
+	const setUser = useUserStore((state) => state.setUser)
+	const isUserLoading = useUserStore((state) => state.isLoading)
 	const theme = usePreferencesStore((state) => state.theme)
 	const toggleTheme = usePreferencesStore((state) => state.toggleTheme)
 	const language = usePreferencesStore((state) => state.language)
 	const toggleLanguage = usePreferencesStore((state) => state.toggleLanguage)
 	const { t } = useI18n()
 	const [isLoggingOut, setIsLoggingOut] = useState(false)
+	const app = useAppStore((state) => state.app)
+	const hasUpdate = useAppStore((state) => state.hasUpdate)
+	const latestRelease = useAppStore((state) => state.latestRelease)
+	const isCheckingForUpdates = useAppStore(
+		(state) => state.isCheckingForUpdates,
+	)
+	const checkForUpdates = useAppStore((state) => state.checkForUpdates)
 	const isDarkMode = theme === 'dark'
 
 	const handleLogout = async () => {
@@ -57,29 +73,6 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 		try {
 			await authService.logout()
 			setUser(null)
-
-			useTabsStore.setState({
-				tabs: [],
-				contentById: {},
-			})
-			useTabsStore.persist.clearStorage()
-			useActiveStore.setState({
-				activeTabId: null,
-				connectionId: null,
-				database: null,
-				table: null,
-			})
-			useConnectionStore.setState({
-				connections: [],
-			})
-
-			useMetadataStore.setState({
-				databases: {},
-				schema: {},
-				relationships: {},
-			})
-
-			useDataEditorStore.setState({ tablesState: {} })
 			toast.success(t('toast.logoutSuccess'))
 		} catch (error) {
 			console.error('Logout failed:', error)
@@ -87,6 +80,37 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 		} finally {
 			setIsLoggingOut(false)
 		}
+	}
+
+	const handleCheckForUpdates = async () => {
+		const result = await checkForUpdates({ includeCurrentRelease: true })
+		if (!result) {
+			toast.error(t('updates.checkFailed'))
+			return
+		}
+
+		if (result.hasUpdate) {
+			toast.info(
+				t('updates.toastAvailable', {
+					version: result.latestRelease.version,
+					date: formatReleaseDate(result.latestRelease.publishedAt, language),
+				}),
+			)
+			return
+		}
+
+		toast.success(
+			t('updates.upToDate', {
+				version: result.app.version,
+			}),
+		)
+	}
+
+	const handleOpenLatestRelease = () => {
+		const targetUrl = latestRelease?.htmlUrl ?? APP_RELEASES_URL
+		void openUrl(targetUrl).catch(() =>
+			toast.error(t('updates.openReleaseFailed')),
+		)
 	}
 
 	return (
@@ -162,49 +186,91 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 					</button>
 				</motion.div>
 
-				{user ?
-					<>
-						{/* Divider nhỏ phân cách tool và avatar */}
-						<div className='h-4 w-px bg-border mx-1 hidden sm:block'></div>
+				<div className='h-4 w-px bg-border mx-1 hidden sm:block'></div>
 
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<motion.button
-									whileHover={{ scale: 1.05 }}
-									className='ml-1 outline-none rounded-full ring-offset-background focus-visible:ring-2 focus-visible:ring-ring'>
-									<Avatar className='h-5 w-5 xl:h-6 xl:w-6 border border-border/50 shadow-sm'>
-										<AvatarImage
-											src={
-												user.photo_url ||
-												'/resources/default-user.jpg'
-											}
-										/>
-										<AvatarFallback className='text-[10px] font-semibold bg-primary/10 text-primary'>
-											{user.name
-												?.substring(0, 2)
-												.toUpperCase() || 'U'}
-										</AvatarFallback>
-									</Avatar>
-								</motion.button>
-							</DropdownMenuTrigger>
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<motion.button
+							whileHover={{ scale: 1.05 }}
+							className='relative ml-1 outline-none rounded-full ring-offset-background focus-visible:ring-2 focus-visible:ring-ring'>
+							<Avatar className='h-5 w-5 xl:h-6 xl:w-6 border border-border/50 shadow-sm'>
+								<AvatarImage
+									src={user?.photo_url || '/resources/default-user.jpg'}
+								/>
+								<AvatarFallback className='text-[10px] font-semibold bg-primary/10 text-primary'>
+									{user?.name?.substring(0, 2).toUpperCase() || 'HN'}
+								</AvatarFallback>
+							</Avatar>
+							{hasUpdate && (
+								<span className='absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background' />
+							)}
+						</motion.button>
+					</DropdownMenuTrigger>
 
-							<DropdownMenuContent
-								align='end'
-								className='w-56'>
-								<DropdownMenuLabel className='max-w-60 truncate font-mono text-xs'>
-									{user.name || t('common.user')}
-								</DropdownMenuLabel>
-								<DropdownMenuSeparator />
+					<DropdownMenuContent
+						align='end'
+						className='w-64'>
+						<DropdownMenuLabel className='space-y-1.5'>
+							{isUserLoading && !user ?
+								<div className='space-y-1.5 py-1'>
+									<Skeleton className='h-4 w-24' />
+									<Skeleton className='h-3 w-32' />
+								</div>
+							:	<>
+									<div className='max-w-60 truncate text-sm font-medium'>
+										{user?.name || app.name}
+									</div>
+									<div className='max-w-60 truncate font-mono text-[11px] text-muted-foreground'>
+										{user?.email || `v${app.version}`}
+									</div>
+								</>
+							}
+						</DropdownMenuLabel>
+						<DropdownMenuSeparator />
 
-								<DropdownMenuItem asChild>
-									<Link
-										to='/me/settings'
-										className='text-xs cursor-pointer'>
-										<SettingsIcon className='w-4 h-4 mr-2 text-muted-foreground' />
-										{t('common.settings')}
-									</Link>
-								</DropdownMenuItem>
+						<DropdownMenuItem asChild>
+							<Link
+								to='/about'
+								className='text-xs cursor-pointer'>
+								<InfoIcon className='w-4 h-4 mr-2 text-muted-foreground' />
+								{t('settings.aboutTab')}
+							</Link>
+						</DropdownMenuItem>
 
+						<DropdownMenuItem
+							onSelect={() => void handleCheckForUpdates()}
+							disabled={isCheckingForUpdates}
+							className='text-xs cursor-pointer'>
+							<RefreshCwIcon
+								className={`w-4 h-4 mr-2 text-muted-foreground ${isCheckingForUpdates ? 'animate-spin' : ''}`}
+							/>
+							{t('updates.checkButton')}
+						</DropdownMenuItem>
+
+						{hasUpdate && latestRelease && (
+							<DropdownMenuItem
+								onSelect={handleOpenLatestRelease}
+								className='text-xs cursor-pointer'>
+								<DownloadIcon className='w-4 h-4 mr-2 text-muted-foreground' />
+								{t('updates.downloadButton', {
+									version: latestRelease.version,
+								})}
+							</DropdownMenuItem>
+						)}
+
+						<DropdownMenuSeparator />
+
+						<DropdownMenuItem asChild>
+							<Link
+								to='/me/settings'
+								className='text-xs cursor-pointer'>
+								<SettingsIcon className='w-4 h-4 mr-2 text-muted-foreground' />
+								{t('common.settings')}
+							</Link>
+						</DropdownMenuItem>
+
+						{user ?
+							<>
 								<DropdownMenuSeparator />
 
 								<DropdownMenuItem
@@ -217,10 +283,20 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 										t('common.loggingOut')
 									:	t('common.logout')}
 								</DropdownMenuItem>
-							</DropdownMenuContent>
-						</DropdownMenu>
-					</>
-				:	null}
+							</>
+						:	<>
+								<DropdownMenuSeparator />
+
+								<DropdownMenuItem
+									onSelect={() => navigate('/enter')}
+									className='text-xs cursor-pointer'>
+									<LogInIcon className='w-4 h-4 mr-2 text-muted-foreground' />
+									{t('common.login')}
+								</DropdownMenuItem>
+							</>
+						}
+					</DropdownMenuContent>
+				</DropdownMenu>
 			</div>
 		</motion.header>
 	)

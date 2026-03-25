@@ -1,5 +1,5 @@
 use crate::db_client::DbClient;
-use crate::helpers::{build_conn_str, get_config_by_id, remove_connection_family};
+use crate::helpers::{build_conn_str, get_runtime_config_by_id, remove_connection_family};
 use crate::state::AppState;
 
 #[tauri::command]
@@ -13,7 +13,7 @@ pub async fn invalidate_connection(
         client.close().await;
     }
 
-    let config = get_config_by_id(&app, id.as_str())?;
+    let config = get_runtime_config_by_id(&app, id.as_str(), &state).await?;
     let conn_str = build_conn_str(&config)?;
 
     let new_client = DbClient::connect(&config.driver, &conn_str).await?;

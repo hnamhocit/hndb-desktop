@@ -53,6 +53,7 @@ pub fn run() {
             active_connections: Mutex::new(std::collections::HashMap::new()),
             active_database_connections: Mutex::new(std::collections::HashMap::new()),
             manually_disconnected_connections: Mutex::new(std::collections::HashSet::new()),
+            session_connection_passwords: Mutex::new(std::collections::HashMap::new()),
         })
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
