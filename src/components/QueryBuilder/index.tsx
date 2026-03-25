@@ -31,7 +31,7 @@ import {
 import { Button } from '../ui/button'
 import ConfirmQueryDialog from './ConfirmQueryDialog'
 import Header from './Header/index'
-import SqlEditor from './SqlEditor'
+import SqlEditor, { type SqlEditorApi } from './SqlEditor'
 import TabContent from './TabContent'
 
 const tabIds = ['results', 'execution-log', 'query-plan'] as const
@@ -45,6 +45,7 @@ const RESULT_PANEL_MAX_VIEWPORT_RATIO = 0.72
 const QUERY_HISTORY_STORAGE_KEY = 'hndb.query.history'
 const MAX_QUERY_HISTORY_ITEMS = 20
 const HISTORY_DROPDOWN_LIMIT = 10
+type QueryExecutionScope = 'smart' | 'all'
 
 type QueryHistoryItem = {
 	query: string
@@ -155,6 +156,8 @@ const QueryBuilder = () => {
 		startY: number
 		startHeight: number
 	} | null>(null)
+	const sqlEditorApiRef = useRef<SqlEditorApi | null>(null)
+	const pendingForcedQueryRef = useRef<string | null>(null)
 
 	const { contentById, commitContent } = useTabsStore()
 	const { triggerRefresh } = useMetadataStore()
@@ -188,8 +191,6 @@ const QueryBuilder = () => {
 			title: t('query.tab.queryPlan'),
 		},
 	]
-	const toggleIsOpen = () => setIsOpen((prev) => !prev)
-
 	useEffect(() => {
 		if (!isDisconnected) return
 
@@ -277,7 +278,29 @@ const QueryBuilder = () => {
 		})
 	}
 
-	const handleRunQuery = async (forced: boolean = false) => {
+	const resolveQueryToRun = (
+		scope: QueryExecutionScope,
+		explicitQuery?: string | null,
+	) => {
+		if (explicitQuery && explicitQuery.trim()) {
+			return explicitQuery.trim()
+		}
+
+		if (scope === 'all') {
+			return currentQuery.trim()
+		}
+
+		return (
+			sqlEditorApiRef.current?.getExecutableQuery('smart') ??
+			currentQuery.trim()
+		)
+	}
+
+	const handleRunQuery = async (
+		forced: boolean = false,
+		scope: QueryExecutionScope = 'smart',
+		explicitQuery?: string | null,
+	) => {
 		if (!activeTab) {
 			return
 		}
@@ -296,7 +319,12 @@ const QueryBuilder = () => {
 			return
 		}
 
-		const query = contentById[activeTab.id]
+		const query = resolveQueryToRun(scope, explicitQuery)
+		if (!query) {
+			toast.info(t('query.header.noQuery'))
+			return
+		}
+
 		addQueryToHistory(query)
 
 		setIsLoading(true)
@@ -326,6 +354,7 @@ const QueryBuilder = () => {
 			}
 		} catch (error) {
 			if (!forced && isDangerousQueryError(error)) {
+				pendingForcedQueryRef.current = query
 				setIsOpen(true)
 				return
 			}
@@ -342,6 +371,13 @@ const QueryBuilder = () => {
 			setIsResultPanelCollapsed(false)
 		} finally {
 			setIsLoading(false)
+		}
+	}
+
+	const handleConfirmDialogOpenChange = (open: boolean) => {
+		setIsOpen(open)
+		if (!open) {
+			pendingForcedQueryRef.current = null
 		}
 	}
 
@@ -416,7 +452,7 @@ const QueryBuilder = () => {
 	return (
 		<div className='flex flex-col h-full min-h-0'>
 			<Header
-				onRunQuery={() => void handleRunQuery()}
+				onRunQuery={() => void handleRunQuery(false, 'smart')}
 				onSaveQuery={handleSaveQuery}
 				onFormatQuery={handleFormatQuery}
 				onSelectHistoryQuery={handleSelectHistoryQuery}
@@ -432,7 +468,13 @@ const QueryBuilder = () => {
 			/>
 
 			<div className='relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background'>
-				<SqlEditor />
+				<SqlEditor
+					onRunQuery={() => void handleRunQuery(false, 'smart')}
+					onRunAllQuery={() => void handleRunQuery(false, 'all')}
+					onEditorReady={(api) => {
+						sqlEditorApiRef.current = api
+					}}
+				/>
 
 				{(result || executionError) && (
 					<>
@@ -640,8 +682,14 @@ const QueryBuilder = () => {
 
 			<ConfirmQueryDialog
 				isOpen={isOpen}
-				onOpenChange={toggleIsOpen}
-				onRunQuery={handleRunQuery}
+				onOpenChange={handleConfirmDialogOpenChange}
+				onRunQuery={(force) =>
+					void handleRunQuery(
+						force,
+						'smart',
+						pendingForcedQueryRef.current,
+					)
+				}
 			/>
 		</div>
 	)

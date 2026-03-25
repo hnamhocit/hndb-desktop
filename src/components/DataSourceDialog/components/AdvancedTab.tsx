@@ -307,8 +307,10 @@ const renderSettingInput = ({
 				type='number'
 				value={currentValue}
 				disabled={!setting.is_editable}
-				min={setting.min_val || undefined}
-				max={setting.max_val || undefined}
+				// PostgreSQL exposes some numeric settings with special sentinel
+				// values like -1 even when pg_settings reports a non-negative range.
+				// Let backend validation be the source of truth instead of browser
+				// min/max validation so valid sentinel values are not blocked.
 				step={setting.setting_type === 'integer' ? '1' : 'any'}
 				onChange={(event) =>
 					onChange(setting.name, event.target.value, setting.value)
