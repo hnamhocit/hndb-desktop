@@ -28,34 +28,36 @@ import { useAppStore } from '@/stores'
 export default function AboutPage() {
 	const { t, language } = useI18n()
 	const app = useAppStore((state) => state.app)
-	const currentRelease = useAppStore((state) => state.currentRelease)
 	const latestRelease = useAppStore((state) => state.latestRelease)
 	const hasUpdate = useAppStore((state) => state.hasUpdate)
 	const checkedAt = useAppStore((state) => state.checkedAt)
 	const isCheckingForUpdates = useAppStore(
 		(state) => state.isCheckingForUpdates,
 	)
+	const isInstallingUpdate = useAppStore((state) => state.isInstallingUpdate)
 	const updateError = useAppStore((state) => state.updateError)
 	const initializeApp = useAppStore((state) => state.initialize)
 	const checkForUpdates = useAppStore((state) => state.checkForUpdates)
+	const downloadAndInstallUpdate = useAppStore(
+		(state) => state.downloadAndInstallUpdate,
+	)
 
 	const resolvedCurrentRelease =
-		currentRelease ??
-		(latestRelease?.version === app.version ? latestRelease : null)
+		latestRelease?.version === app.version ? latestRelease : null
 
 	useEffect(() => {
 		void initializeApp()
-		void checkForUpdates({ includeCurrentRelease: true })
+		void checkForUpdates()
 	}, [checkForUpdates, initializeApp])
 
 	const handleCheckForUpdates = async () => {
-		const result = await checkForUpdates({ includeCurrentRelease: true })
+		const result = await checkForUpdates()
 		if (!result) {
 			toast.error(t('updates.checkFailed'))
 			return
 		}
 
-		if (result.hasUpdate) {
+		if (result.hasUpdate && result.latestRelease) {
 			toast.info(
 				t('updates.toastAvailable', {
 					version: result.latestRelease.version,
@@ -70,6 +72,16 @@ export default function AboutPage() {
 				version: result.app.version,
 			}),
 		)
+	}
+
+	const handleInstallUpdate = async () => {
+		const success = await downloadAndInstallUpdate()
+		if (!success) {
+			toast.error(t('updates.installFailed'))
+			return
+		}
+
+		toast.success(t('updates.installing'))
 	}
 
 	const handleOpenUrl = async (url: string) => {
@@ -152,8 +164,7 @@ export default function AboutPage() {
 								)}
 							</div>
 							<div className='text-xs text-muted-foreground'>
-								{resolvedCurrentRelease?.tagName ??
-									t('settings.aboutReleaseDateUnknown')}
+								{resolvedCurrentRelease?.version ?? t('settings.aboutReleaseDateUnknown')}
 							</div>
 						</div>
 
@@ -163,7 +174,7 @@ export default function AboutPage() {
 								{t('settings.aboutLatestRelease')}
 							</div>
 							<div className='font-mono text-sm'>
-								{latestRelease?.tagName ?? '...'}
+								{latestRelease?.version ?? app.version}
 							</div>
 							<div className='text-xs text-muted-foreground'>
 								{latestRelease ?
@@ -215,8 +226,14 @@ export default function AboutPage() {
 						</Button>
 						{hasUpdate && latestRelease && (
 							<Button
-								onClick={() => void handleOpenUrl(latestRelease.htmlUrl)}>
-								<ArrowUpRightIcon size={14} />
+								onClick={() => void handleInstallUpdate()}
+								disabled={isInstallingUpdate || isCheckingForUpdates}>
+								<RefreshCwIcon
+									size={14}
+									className={
+										isInstallingUpdate ? 'animate-spin' : undefined
+									}
+								/>
 								{t('updates.downloadButton', {
 									version: latestRelease.version,
 								})}

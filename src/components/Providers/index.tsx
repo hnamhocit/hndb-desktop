@@ -104,11 +104,11 @@ export default function Providers({ children }: { children: ReactNode }) {
 				return
 			}
 
-			if (notifiedReleaseTagRef.current === result.latestRelease.tagName) {
+			if (notifiedReleaseTagRef.current === result.latestRelease.version) {
 				return
 			}
 
-			notifiedReleaseTagRef.current = result.latestRelease.tagName
+			notifiedReleaseTagRef.current = result.latestRelease.version
 			toast.info(
 				localeRef.current.t('updates.toastAvailable', {
 					version: result.latestRelease.version,
@@ -182,6 +182,7 @@ export default function Providers({ children }: { children: ReactNode }) {
 			setIsLoading(true)
 			try {
 				await initializeApp()
+				await notifyIfUpdateAvailable()
 
 				// Reset và load connections
 				await connectionService.resetSessions()
@@ -196,7 +197,6 @@ export default function Providers({ children }: { children: ReactNode }) {
 				const { data: { session } } = await supabaseClient.auth.getSession()
 				if (session?.user) {
 					await fetchUser(session.user)
-					await notifyIfUpdateAvailable()
 				} else {
 					setUser(null)
 				}

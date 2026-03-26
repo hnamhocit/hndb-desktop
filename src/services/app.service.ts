@@ -1,14 +1,16 @@
 import { getName, getVersion } from '@tauri-apps/api/app'
+import { check, type Update } from '@tauri-apps/plugin-updater'
 
 import packageJson from '../../package.json'
 import type { AppLanguage } from './preferences.service'
 
 const GITHUB_OWNER = 'hnamhocit'
 const GITHUB_REPO = 'hndb'
-const GITHUB_API_BASE = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`
 
 export const APP_REPOSITORY_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`
 export const APP_RELEASES_URL = `${APP_REPOSITORY_URL}/releases`
+export const APP_UPDATER_MANIFEST_URL =
+	`${APP_RELEASES_URL}/latest/download/latest.json`
 export const APP_TECH_STACK = [
 	'Tauri 2',
 	'React 18',
@@ -25,111 +27,48 @@ export interface InstalledAppInfo {
 }
 
 export interface AppReleaseInfo {
-	tagName: string
 	version: string
-	name: string
-	body: string
-	htmlUrl: string
+	notes: string
 	publishedAt: string | null
-	prerelease: boolean
+	rawJson: Record<string, unknown>
 }
 
 export interface AppUpdateCheckResult {
 	app: InstalledAppInfo
-	latestRelease: AppReleaseInfo
-	currentRelease: AppReleaseInfo | null
+	latestRelease: AppReleaseInfo | null
 	hasUpdate: boolean
 	checkedAt: string
+	update: Update | null
 }
 
-const normalizeReleaseVersion = (value: string) =>
-	value.trim().replace(/^v/i, '')
-
-const tokenizeVersion = (value: string) =>
-	normalizeReleaseVersion(value)
-		.split(/[\.\-_]+/)
-		.filter(Boolean)
-		.map((segment) => {
-			const numeric = Number.parseInt(segment, 10)
-			return Number.isNaN(numeric) ? segment.toLowerCase() : numeric
-		})
-
-export const compareVersions = (left: string, right: string) => {
-	const leftTokens = tokenizeVersion(left)
-	const rightTokens = tokenizeVersion(right)
-	const maxLength = Math.max(leftTokens.length, rightTokens.length)
-
-	for (let index = 0; index < maxLength; index += 1) {
-		const leftToken = leftTokens[index]
-		const rightToken = rightTokens[index]
-
-		if (leftToken === undefined) return -1
-		if (rightToken === undefined) return 1
-
-		if (typeof leftToken === 'number' && typeof rightToken === 'number') {
-			if (leftToken > rightToken) return 1
-			if (leftToken < rightToken) return -1
-			continue
-		}
-
-		const leftValue = String(leftToken)
-		const rightValue = String(rightToken)
-		if (leftValue > rightValue) return 1
-		if (leftValue < rightValue) return -1
-	}
-
-	return 0
-}
-
-const mapGithubRelease = (input: unknown): AppReleaseInfo => {
+const mapReleaseManifest = (input: unknown): AppReleaseInfo => {
 	if (!input || typeof input !== 'object') {
-		throw new Error('Invalid release payload.')
+		throw new Error('Invalid updater manifest payload.')
 	}
 
 	const payload = input as Record<string, unknown>
-	const tagName =
-		typeof payload.tag_name === 'string' ? payload.tag_name.trim() : ''
-	const htmlUrl =
-		typeof payload.html_url === 'string' ? payload.html_url.trim() : ''
+	const version =
+		typeof payload.version === 'string' ? payload.version.trim() : ''
 
-	if (!tagName || !htmlUrl) {
-		throw new Error('Missing release tag or url.')
+	if (!version) {
+		throw new Error('Missing updater manifest version.')
 	}
 
 	return {
-		tagName,
-		version: normalizeReleaseVersion(tagName),
-		name:
-			typeof payload.name === 'string' && payload.name.trim() ?
-				payload.name.trim()
-			:	tagName,
-		body: typeof payload.body === 'string' ? payload.body : '',
-		htmlUrl,
+		version,
+		notes: typeof payload.notes === 'string' ? payload.notes : '',
 		publishedAt:
-			typeof payload.published_at === 'string' ?
-				payload.published_at
-			:	null,
-		prerelease: Boolean(payload.prerelease),
+			typeof payload.pub_date === 'string' ? payload.pub_date : null,
+		rawJson: payload,
 	}
 }
 
-const fetchGithubRelease = async (path: string) => {
-	const response = await fetch(`${GITHUB_API_BASE}${path}`, {
-		headers: {
-			Accept: 'application/vnd.github+json',
-		},
-	})
-
-	if (response.status === 404) {
-		return null
-	}
-
-	if (!response.ok) {
-		throw new Error(`GitHub release request failed with status ${response.status}.`)
-	}
-
-	return mapGithubRelease(await response.json())
-}
+const mapPendingUpdate = (update: Update): AppReleaseInfo => ({
+	version: update.version,
+	notes: update.body ?? '',
+	publishedAt: update.date ?? null,
+	rawJson: update.rawJson,
+})
 
 export const getInstalledAppInfo = async (): Promise<InstalledAppInfo> => {
 	const fallbackName = packageJson.name.toUpperCase()
@@ -149,45 +88,69 @@ export const getInstalledAppInfo = async (): Promise<InstalledAppInfo> => {
 	}
 }
 
-export const fetchLatestRelease = async () =>
-	fetchGithubRelease('/releases/latest')
+export const fetchLatestRelease = async (): Promise<AppReleaseInfo | null> => {
+	const response = await fetch(APP_UPDATER_MANIFEST_URL, {
+		headers: {
+			Accept: 'application/json',
+		},
+	})
 
-export const fetchReleaseByTag = async (tagOrVersion: string) => {
-	const normalizedVersion = normalizeReleaseVersion(tagOrVersion)
-	return (
-		(await fetchGithubRelease(`/releases/tags/v${normalizedVersion}`)) ??
-		(await fetchGithubRelease(`/releases/tags/${normalizedVersion}`))
-	)
+	if (response.status === 404) {
+		return null
+	}
+
+	if (!response.ok) {
+		throw new Error(
+			`GitHub updater manifest request failed with status ${response.status}.`,
+		)
+	}
+
+	return mapReleaseManifest(await response.json())
 }
 
 export const checkForAppUpdates = async (
 	options?: {
 		app?: InstalledAppInfo
-		includeCurrentRelease?: boolean
 	},
 ): Promise<AppUpdateCheckResult> => {
 	const app = options?.app ?? (await getInstalledAppInfo())
-	const latestRelease = await fetchLatestRelease()
+	let latestRelease: AppReleaseInfo | null = null
+	let update: Update | null = null
+	let manifestError: Error | null = null
 
-	if (!latestRelease) {
-		throw new Error('Latest release not found.')
+	try {
+		latestRelease = await fetchLatestRelease()
+	} catch (error) {
+		manifestError =
+			error instanceof Error ?
+				error
+			:	new Error('Failed to fetch updater manifest.')
 	}
 
-	const currentRelease =
-		options?.includeCurrentRelease ?
-			(await fetchReleaseByTag(app.version)) ??
-			(normalizeReleaseVersion(latestRelease.tagName) ===
-			normalizeReleaseVersion(app.version) ?
-				latestRelease
-			:	null)
-		:	null
+	try {
+		update = await check()
+	} catch (error) {
+		if (manifestError) {
+			throw error
+		}
+
+		throw (
+			error instanceof Error ?
+				error
+			:	new Error('Failed to check updates.')
+		)
+	}
+
+	const resolvedLatestRelease =
+		update ? mapPendingUpdate(update)
+		: latestRelease
 
 	return {
 		app,
-		latestRelease,
-		currentRelease,
-		hasUpdate: compareVersions(latestRelease.version, app.version) > 0,
+		latestRelease: resolvedLatestRelease,
+		hasUpdate: Boolean(update),
 		checkedAt: new Date().toISOString(),
+		update,
 	}
 }
 

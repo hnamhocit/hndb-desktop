@@ -12,7 +12,6 @@ import {
 	SunIcon,
 } from 'lucide-react'
 import { motion } from 'motion/react'
-import { openUrl } from '@tauri-apps/plugin-opener'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
@@ -28,11 +27,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useI18n } from '@/hooks'
-import {
-	APP_RELEASES_URL,
-	authService,
-	formatReleaseDate,
-} from '@/services'
+import { authService, formatReleaseDate } from '@/services'
 import {
 	useAppStore,
 	usePreferencesStore,
@@ -65,7 +60,11 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 	const isCheckingForUpdates = useAppStore(
 		(state) => state.isCheckingForUpdates,
 	)
+	const isInstallingUpdate = useAppStore((state) => state.isInstallingUpdate)
 	const checkForUpdates = useAppStore((state) => state.checkForUpdates)
+	const downloadAndInstallUpdate = useAppStore(
+		(state) => state.downloadAndInstallUpdate,
+	)
 	const isDarkMode = theme === 'dark'
 
 	const handleLogout = async () => {
@@ -83,13 +82,13 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 	}
 
 	const handleCheckForUpdates = async () => {
-		const result = await checkForUpdates({ includeCurrentRelease: true })
+		const result = await checkForUpdates()
 		if (!result) {
 			toast.error(t('updates.checkFailed'))
 			return
 		}
 
-		if (result.hasUpdate) {
+		if (result.hasUpdate && result.latestRelease) {
 			toast.info(
 				t('updates.toastAvailable', {
 					version: result.latestRelease.version,
@@ -106,11 +105,14 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 		)
 	}
 
-	const handleOpenLatestRelease = () => {
-		const targetUrl = latestRelease?.htmlUrl ?? APP_RELEASES_URL
-		void openUrl(targetUrl).catch(() =>
-			toast.error(t('updates.openReleaseFailed')),
-		)
+	const handleInstallUpdate = async () => {
+		const success = await downloadAndInstallUpdate()
+		if (!success) {
+			toast.error(t('updates.installFailed'))
+			return
+		}
+
+		toast.success(t('updates.installing'))
 	}
 
 	return (
@@ -249,7 +251,8 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
 
 						{hasUpdate && latestRelease && (
 							<DropdownMenuItem
-								onSelect={handleOpenLatestRelease}
+								onSelect={() => void handleInstallUpdate()}
+								disabled={isInstallingUpdate || isCheckingForUpdates}
 								className='text-xs cursor-pointer'>
 								<DownloadIcon className='w-4 h-4 mr-2 text-muted-foreground' />
 								{t('updates.downloadButton', {

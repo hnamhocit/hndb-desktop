@@ -1,3 +1,4 @@
+import type { Update } from '@tauri-apps/plugin-updater'
 import { create } from 'zustand'
 
 import {
@@ -5,24 +6,21 @@ import {
 	type AppUpdateCheckResult,
 	type InstalledAppInfo,
 	checkForAppUpdates,
-	fetchReleaseByTag,
 	getInstalledAppInfo,
 } from '@/services/app.service'
 
 interface AppStore {
 	app: InstalledAppInfo
-	currentRelease: AppReleaseInfo | null
 	latestRelease: AppReleaseInfo | null
 	hasUpdate: boolean
 	checkedAt: string | null
 	isCheckingForUpdates: boolean
+	isInstallingUpdate: boolean
 	updateError: string | null
+	pendingUpdate: Update | null
 	initialize: () => Promise<InstalledAppInfo>
-	checkForUpdates: (
-		options?: {
-			includeCurrentRelease?: boolean
-		},
-	) => Promise<AppUpdateCheckResult | null>
+	checkForUpdates: () => Promise<AppUpdateCheckResult | null>
+	downloadAndInstallUpdate: () => Promise<boolean>
 }
 
 const DEFAULT_APP_INFO: InstalledAppInfo = {
@@ -30,14 +28,25 @@ const DEFAULT_APP_INFO: InstalledAppInfo = {
 	version: '0.0.0',
 }
 
+const closePendingUpdate = async (update: Update | null) => {
+	if (!update) return
+
+	try {
+		await update.close()
+	} catch {
+		// Ignore stale updater resource cleanup failures.
+	}
+}
+
 export const useAppStore = create<AppStore>((set, get) => ({
 	app: DEFAULT_APP_INFO,
-	currentRelease: null,
 	latestRelease: null,
 	hasUpdate: false,
 	checkedAt: null,
 	isCheckingForUpdates: false,
+	isInstallingUpdate: false,
 	updateError: null,
+	pendingUpdate: null,
 
 	initialize: async () => {
 		const app = await getInstalledAppInfo()
@@ -49,62 +58,76 @@ export const useAppStore = create<AppStore>((set, get) => ({
 		return app
 	},
 
-	checkForUpdates: async (options) => {
+	checkForUpdates: async () => {
 		set({ isCheckingForUpdates: true, updateError: null })
 
 		try {
+			const previousUpdate = get().pendingUpdate
+			await closePendingUpdate(previousUpdate)
+
 			const app =
 				get().app.version !== DEFAULT_APP_INFO.version ?
 					get().app
 				:	await get().initialize()
-			const result = await checkForAppUpdates({
-				app,
-				includeCurrentRelease: options?.includeCurrentRelease ?? false,
-			})
-
-			let currentRelease = result.currentRelease
-			if (
-				!currentRelease &&
-				options?.includeCurrentRelease &&
-				result.app.version
-			) {
-				currentRelease = await fetchReleaseByTag(result.app.version)
-			}
+			const result = await checkForAppUpdates({ app })
 
 			set({
 				app: result.app,
-				currentRelease:
-					currentRelease ??
-					(normalizeTag(result.latestRelease.tagName) ===
-					normalizeTag(result.app.version) ?
-						result.latestRelease
-					:	null),
 				latestRelease: result.latestRelease,
 				hasUpdate: result.hasUpdate,
 				checkedAt: result.checkedAt,
 				isCheckingForUpdates: false,
 				updateError: null,
+				pendingUpdate: result.update,
 			})
 
-			return {
-				...result,
-				currentRelease:
-					currentRelease ??
-					(normalizeTag(result.latestRelease.tagName) ===
-					normalizeTag(result.app.version) ?
-						result.latestRelease
-					:	null),
-			}
+			return result
 		} catch (error) {
 			set({
 				isCheckingForUpdates: false,
 				updateError:
 					error instanceof Error ? error.message : 'Failed to check updates.',
 				checkedAt: new Date().toISOString(),
+				hasUpdate: false,
+				pendingUpdate: null,
 			})
 			return null
 		}
 	},
-}))
 
-const normalizeTag = (value: string) => value.trim().replace(/^v/i, '')
+	downloadAndInstallUpdate: async () => {
+		set({ isInstallingUpdate: true, updateError: null })
+
+		try {
+			const pendingUpdate =
+				get().pendingUpdate ?? (await get().checkForUpdates())?.update ?? null
+
+			if (!pendingUpdate) {
+				set({
+					isInstallingUpdate: false,
+					hasUpdate: false,
+				})
+				return false
+			}
+
+			await pendingUpdate.downloadAndInstall()
+			await closePendingUpdate(pendingUpdate)
+
+			set({
+				isInstallingUpdate: false,
+				pendingUpdate: null,
+			})
+
+			return true
+		} catch (error) {
+			set({
+				isInstallingUpdate: false,
+				updateError:
+					error instanceof Error ?
+						error.message
+					:	'Failed to download and install update.',
+			})
+			return false
+		}
+	},
+}))

@@ -552,8 +552,8 @@ export const messages = {
 		vi: 'Bạn đang ở bản mới nhất.',
 	},
 	'updates.downloadButton': {
-		en: 'Download v{{version}}',
-		vi: 'Tải v{{version}}',
+		en: 'Download and install v{{version}}',
+		vi: 'Tải và cài v{{version}}',
 	},
 	'updates.upToDate': {
 		en: 'You are already on the latest version (v{{version}}).',
@@ -570,6 +570,14 @@ export const messages = {
 	'updates.toastAvailable': {
 		en: 'A newer version v{{version}} is available. Published on {{date}}.',
 		vi: 'Có phiên bản mới v{{version}}. Phát hành ngày {{date}}.',
+	},
+	'updates.installing': {
+		en: 'Update downloaded. Installation is starting.',
+		vi: 'Đã tải xong bản cập nhật. Quá trình cài đặt đang bắt đầu.',
+	},
+	'updates.installFailed': {
+		en: 'Failed to download and install the update.',
+		vi: 'Không thể tải và cài đặt bản cập nhật.',
 	},
 
 	'home.greetingMorning': { en: 'Good morning', vi: 'Chào buổi sáng' },

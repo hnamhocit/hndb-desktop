@@ -1,0 +1,15 @@
+{
+	"version": "0.1.1",
+	"notes": "HNDB v0.1.1",
+	"pub_date": "2026-03-26T00:00:00Z",
+	"platforms": {
+		"linux-x86_64": {
+			"signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRc0Z2UGlNc2lEeEZ5RDdBaUlBWmxDZUpwbWxhYUZBeWx3WmZXZXRJQmtkVkp6ZWgwNXU4Q0tOYzVJSEFaaGdlSDJFc0hYUURYS1ZoTSsyR2o5UWhhZFp6NGM2LzJ3bUFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0NTQwMTk0CWZpbGU6aG5kYl8wLjEuMV9hbWQ2NC5BcHBJbWFnZQpiSnRSaWhJeVFNcTNzS1RzaGQvbk5teWdnWEFQYzUrZnYxNGpyRFB2eGFmOXprOEVUWFkvbHFwVk5QeEptS1BDc2NqS1hhdnhDc3pyQ3FFSEpaSGJDQT09Cg==",
+			"url": "https://github.com/hnamhocit/hndb/releases/download/v0.1.1/hndb_0.1.1_amd64.AppImage"
+		},
+		"windows-x86_64": {
+			"signature": "PASTE_WINDOWS_SIGNATURE_HERE",
+			"url": "https://github.com/hnamhocit/hndb/releases/download/v0.1.1/HNDB_0.1.1_x64-setup.exe"
+		}
+	}
+}
