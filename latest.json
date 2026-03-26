@@ -8,7 +8,7 @@
 			"url": "https://github.com/hnamhocit/hndb/releases/download/v0.1.1/hndb_0.1.1_amd64.AppImage"
 		},
 		"windows-x86_64": {
-			"signature": "PASTE_WINDOWS_SIGNATURE_HERE",
+			"signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRc0Z2UGlNc2lEeE5pSVh3dkdrcXVJb3NOUW0rekNzaThkSVRoQ3JGeDI1RXF5TTRndGNZWm1KU1c1Z3F3U2dBZDhHQm9CS1NHZjQ1d3NpU21jbWVaN040emJtbzh0MVFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0NTQ1MTYxCWZpbGU6aG5kYl8wLjEuMV94NjQtc2V0dXAuZXhlCm9lSjJ4dWY3V0NOamJTTW9FR3NWdmdkcWgrMk1oSktubWxYYkFGbmtwbjdxelMvS2gvb3FQTnA1MDVwTVRZRlhhR2ZpWXlRTVg1SytaVkljcU9vckFnPT0K",
 			"url": "https://github.com/hnamhocit/hndb/releases/download/v0.1.1/HNDB_0.1.1_x64-setup.exe"
 		}
 	}
